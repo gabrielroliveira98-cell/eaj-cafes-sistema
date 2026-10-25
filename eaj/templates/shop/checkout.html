@@ -1,0 +1,147 @@
+{% extends 'base.html' %}
+{% block title %}Finalizar pedido · EAJ Cafés Especiais{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/shop.css') }}">{% endblock %}
+{% macro fld(name, label, type='text', auto='', span=False, hint='', attrs='') %}
+<div class="field{% if errors.get(name) %} has-err{% endif %}{% if span %} span-all{% endif %}">
+  <label for="f-{{ name }}">{{ label }}</label>{# macros leem form/errors do contexto do render_template #}
+  <input class="input" id="f-{{ name }}" name="{{ name }}" type="{{ type }}" value="{{ form.get(name, '') }}"
+         {% if auto %}autocomplete="{{ auto }}"{% endif %} {{ attrs | safe }}
+         {% if errors.get(name) %}aria-invalid="true" aria-describedby="e-{{ name }}"{% endif %}>
+  {% if hint %}<span class="hint">{{ hint }}</span>{% endif %}
+  {% if errors.get(name) %}<span class="err" id="e-{{ name }}">{{ errors[name] }}</span>{% endif %}
+</div>
+{% endmacro %}
+{% block content %}
+<section class="page">
+  <div class="wrap">
+    <header class="page-head">
+      <p class="eyebrow">Finalizar pedido</p>
+      <h1>Quase lá.</h1>
+      <p>Informe seus dados para registrar o pedido. Ainda não é cobrado nada nesta etapa.</p>
+    </header>
+
+    <form class="co" method="post" action="{{ url_for('shop.checkout_post') }}" id="co-form" novalidate>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="items" id="co-items" value="">
+      <div>
+        {% if errors.get('items') %}<p class="notice bad" style="margin-bottom:24px">{{ errors['items'] }}</p>{% endif %}
+        <fieldset>
+          <legend><span>1</span>Contato</legend>
+          <div class="form-grid">
+            {{ fld('name', 'Nome completo', auto='name', span=True, attrs='required maxlength="120"') }}
+            {{ fld('email', 'E-mail', 'email', 'email', hint='Usado para enviar e consultar o seu pedido.', attrs='required maxlength="160"' ~ (' readonly' if current_user and current_user['role'] == 'cliente' else '')) }}
+            {{ fld('phone', 'Telefone com DDD', 'tel', 'tel', hint='A EAJ usa este número para combinar o pagamento e a entrega.', attrs='required inputmode="tel" maxlength="30"') }}
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend><span>2</span>Endereço de entrega</legend>
+          <div class="form-grid">
+            {{ fld('zip', 'CEP', auto='postal-code', attrs='required inputmode="numeric" maxlength="9" placeholder="00000-000"') }}
+            {{ fld('street', 'Rua', auto='address-line1', attrs='required maxlength="160"') }}
+            {{ fld('number', 'Número', attrs='required maxlength="20"') }}
+            {{ fld('complement', 'Complemento (opcional)', auto='address-line2', attrs='maxlength="120"') }}
+            {{ fld('district', 'Bairro', attrs='required maxlength="120"') }}
+            {{ fld('city', 'Cidade', auto='address-level2', attrs='required maxlength="120"') }}
+            <div class="field{% if errors.get('state') %} has-err{% endif %}">
+              <label for="f-state">Estado</label>
+              <select class="input" id="f-state" name="state" autocomplete="address-level1" required>
+                <option value="">Escolha</option>
+                {% for uf in ufs %}<option value="{{ uf }}"{% if form.get('state') == uf %} selected{% endif %}>{{ uf }}</option>{% endfor %}
+              </select>
+              {% if errors.get('state') %}<span class="err">{{ errors['state'] }}</span>{% endif %}
+            </div>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend><span>3</span>Entrega</legend>
+          {% if ships %}
+          <div class="ship-opts" role="radiogroup" aria-label="Forma de entrega">
+            {% for s in ships %}
+            <label class="ship-opt">
+              <input type="radio" name="shipping_method" value="{{ s.id }}" data-price="{{ '' if s.price_cents is none else s.price_cents }}"
+                     {% if (form.get('shipping_method') | string) == (s.id | string) or (loop.first and not form.get('shipping_method')) %}checked{% endif %}>
+              <span><b>{{ s.name }}</b><span class="muted small">{{ s.description }}</span></span>
+              <span class="price-tag">{{ 'A combinar' if s.price_cents is none else (s.price_cents | brl) }}</span>
+            </label>
+            {% endfor %}
+          </div>
+          {% else %}<p class="notice warn">Nenhuma forma de entrega está disponível no momento.</p>{% endif %}
+          {% if errors.get('shipping_method') %}<p class="err" style="margin-top:8px">{{ errors['shipping_method'] }}</p>{% endif %}
+          <div class="field" style="margin-top:20px">
+            <label for="f-notes">Observações (opcional)</label>
+            <textarea class="input" id="f-notes" name="notes" maxlength="600" placeholder="Ponto de referência, melhor horário para contato...">{{ form.get('notes', '') }}</textarea>
+          </div>
+        </fieldset>
+        <label class="check{% if errors.get('consent') %} has-err{% endif %}">
+          <input type="checkbox" name="consent" value="1" {% if form.get('consent') %}checked{% endif %} required>
+          <span>Autorizo a EAJ a usar estes dados para contato, pagamento e entrega deste pedido.</span>
+        </label>
+        {% if errors.get('consent') %}<p class="err" style="margin-top:6px">{{ errors['consent'] }}</p>{% endif %}
+      </div>
+
+      <aside class="co-summary card" aria-live="polite">
+        <h2>Resumo</h2>
+        <div class="co-lines" id="co-lines"><p class="muted" style="padding:20px 0"><span class="spin" aria-hidden="true"></span> Carregando carrinho…</p></div>
+        <div class="co-totals">
+          <div class="sum-row"><span>Subtotal</span><b class="num" id="co-subtotal" style="font-family:var(--sans);font-size:15px;font-weight:700">—</b></div>
+          <div class="sum-row"><span>Frete</span><b class="num" id="co-ship" style="font-family:var(--sans);font-size:15px;font-weight:700">—</b></div>
+          <div class="sum-row total"><span>Total</span><b class="num" id="co-total">—</b></div>
+        </div>
+        <button class="btn btn-gold btn-block" type="submit" id="co-submit" style="margin-top:20px" disabled>Registrar pedido</button>
+        <p class="notice">
+          {% if payment_configured %}Após registrar, você conclui o pagamento pelo método disponível.
+          {% else %}O pedido será registrado como <b>aguardando pagamento</b>. Ainda não há pagamento online: a EAJ entra em contato para combinar o pagamento e a entrega.{% endif %}
+        </p>
+        <noscript><p class="notice bad">Ative o JavaScript para carregar o carrinho e finalizar o pedido.</p></noscript>
+      </aside>
+    </form>
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+// cart.js é carregado com defer: espera ele estar pronto
+document.addEventListener('DOMContentLoaded', () => {
+  const C = window.EAJCart; if (!C) return;
+  const linesEl = document.getElementById('co-lines'), sub = document.getElementById('co-subtotal'),
+        ship = document.getElementById('co-ship'), tot = document.getElementById('co-total'),
+        btn = document.getElementById('co-submit'), form = document.getElementById('co-form'),
+        items = document.getElementById('co-items');
+  let subtotal = 0;
+  function shipping() {
+    const r = form.querySelector('input[name="shipping_method"]:checked');
+    if (!r) return { label: '—', cents: 0 };
+    return r.dataset.price === '' ? { label: 'A combinar', cents: 0, arrange: true } : { label: C.brl(+r.dataset.price), cents: +r.dataset.price };
+  }
+  function totals() {
+    const s = shipping();
+    ship.textContent = s.label;
+    tot.textContent = C.brl(subtotal + s.cents) + (s.arrange ? ' + frete' : '');
+  }
+  async function load() {
+    try {
+      const q = await C.quote();
+      if (!q.lines.length) {
+        linesEl.innerHTML = '<div class="cart-empty"><p>Seu carrinho está vazio.</p><p><a class="btn btn-sm" href="/#loja">Ver os cafés</a></p></div>';
+        btn.disabled = true; sub.textContent = C.brl(0); totals(); return;
+      }
+      linesEl.innerHTML = (q.problems.length ? `<p class="cart-note">${[...new Set(q.problems)].map(C.esc).join(' ')}</p>` : '') +
+        q.lines.map(l => C.lineHTML(l, true)).join('');
+      subtotal = q.subtotal_cents; sub.textContent = C.brl(subtotal); totals();
+      items.value = JSON.stringify(C.read());
+      btn.disabled = false;
+    } catch (e) {
+      linesEl.innerHTML = '<p class="cart-note">Não foi possível carregar o carrinho. Verifique sua conexão e recarregue a página.</p>';
+    }
+  }
+  form.addEventListener('change', e => { if (e.target.name === 'shipping_method') totals(); });
+  form.addEventListener('submit', e => {
+    items.value = JSON.stringify(C.read());
+    btn.disabled = true; btn.textContent = 'Registrando…';
+  });
+  // pageshow cobre a volta pelo botão "voltar" do navegador (página restaurada do cache)
+  window.addEventListener('pageshow', e => { if (e.persisted) { btn.textContent = 'Registrar pedido'; load(); } });
+  load();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,24 @@
+{% extends 'admin/base.html' %}
+{% from 'admin/_macros.html' import csrf with context %}
+{% block title %}Loja e contato{% endblock %}
+{% block content %}
+<header class="ph"><div><p class="eyebrow">Configuração</p><h1>Loja e contato</h1>
+  <p class="muted">Informações exibidas ao cliente na página do pedido. Deixe em branco o que ainda não estiver definido.</p></div></header>
+<div class="grid-2 wide-left">
+  <form class="card form-card" method="post">{{ csrf() }}
+    <div class="stack">
+      <div class="field"><label for="w">WhatsApp da EAJ</label><input class="input" id="w" name="store_whatsapp" value="{{ s.store_whatsapp }}" maxlength="40" inputmode="tel"></div>
+      <div class="field"><label for="e">E-mail de contato</label><input class="input" id="e" name="store_email" value="{{ s.store_email }}" type="email" maxlength="160"></div>
+      <div class="field"><label for="pi">Instruções de pagamento</label><textarea class="input" id="pi" name="payment_instructions" maxlength="600" placeholder="Ex.: chave Pix e como enviar o comprovante">{{ s.payment_instructions }}</textarea>
+        <span class="hint">Aparece para o cliente enquanto o pedido aguarda pagamento.</span></div>
+    </div>
+    <div class="form-actions"><button class="btn btn-gold" type="submit">Salvar</button></div>
+  </form>
+  <div class="card">
+    <h2>Pagamento online</h2>
+    {% if payment_provider %}<p class="notice good">Integração configurada: {{ payment_provider }}.</p>
+    {% else %}<p class="notice">Nenhuma integração de pagamento configurada. Os pedidos ficam como <b>aguardando pagamento</b> e só são confirmados quando você registra o pagamento recebido na tela do pedido.</p>
+    <p class="muted small" style="margin-top:12px">Para integrar um provedor (Pix, cartão), defina <span class="mono">PAYMENT_PROVIDER</span> no arquivo .env e implemente a confirmação via webhook do provedor. Veja o README.</p>{% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+{% block title %}EAJ Cafés Especiais · Da fazenda para sua casa{% endblock %}
+{% block body_class %}home{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/shop.css') }}">
+{% if frames.count %}<link rel="preload" as="image" href="{{ url_for('static', filename=frames.lg[0]) }}">{% endif %}
+{% endblock %}
+
+{% set chapters = [
+  {'from': 0.00, 'eyebrow': 'O grão', 'title': 'Todo grande café começa muito antes da primeira xícara.',
+   'text': 'Grãos torrados, prontos para revelar tudo o que guardam.', 'at': 0.04},
+  {'from': 0.20, 'eyebrow': 'A seleção', 'title': 'Cada detalhe faz parte da experiência.',
+   'text': 'Os grãos repousam no moedor, um instante antes da transformação.', 'at': 0.28},
+  {'from': 0.38, 'eyebrow': 'A transformação', 'title': 'Da origem à sua melhor versão.',
+   'text': 'O grão vira pó e segue direto para a embalagem.', 'at': 0.52},
+  {'from': 0.62, 'eyebrow': 'O cuidado', 'title': 'Embalado para chegar até a sua casa.',
+   'text': 'Da fazenda para sua casa.', 'at': 0.76},
+  {'from': 0.84, 'eyebrow': 'EAJ Cafés Especiais', 'title': 'Descubra o seu próximo café favorito.',
+   'text': 'Sul de Minas · Jacuí–MG · Cultivo natural', 'at': 1.0, 'cta': True},
+] %}
+
+{% block content %}
+{% if frames.count %}
+<section class="cine" id="inicio" aria-label="Apresentação EAJ Cafés Especiais"
+         data-frames-lg="{{ frames.lg | join('|') }}" data-frames-md="{{ frames.md | join('|') }}" data-frames-pt="{{ frames.pt | join('|') }}"
+         data-static="{{ url_for('static', filename='') }}" data-w="{{ frames.width }}" data-h="{{ frames.height }}">
+  <div class="cine-stage">
+    <canvas class="cine-canvas" aria-hidden="true"></canvas>
+    <img class="cine-poster" src="{{ url_for('static', filename=frames.lg[0]) }}" alt="" aria-hidden="true">
+    <div class="cine-shade" aria-hidden="true"></div>
+
+    <div class="cine-copy wrap">
+      {% for c in chapters %}
+      <article class="chap{% if loop.first %} on{% endif %}" data-from="{{ c.from }}" data-to="{{ chapters[loop.index].from if not loop.last else 1.01 }}">
+        <p class="eyebrow"><span class="chap-n">{{ '%02d' % loop.index }}</span>{{ c.eyebrow }}</p>
+        {% if loop.first %}<h1 class="chap-title">{{ c.title }}</h1>{% else %}<h2 class="chap-title">{{ c.title }}</h2>{% endif %}
+        <p class="chap-text">{{ c.text }}</p>
+        {% if c.cta %}<div class="chap-cta"><a class="btn btn-gold" href="#loja">Conhecer os cafés</a></div>{% endif %}
+        <img class="chap-img" src="{{ url_for('static', filename=frames.md[((frames.count - 1) * c.at) | round | int]) }}"
+             alt="" loading="lazy" width="800" height="450">
+      </article>
+      {% endfor %}
+    </div>
+
+    <div class="cine-rail" aria-hidden="true">
+      {% for c in chapters %}<span data-i="{{ loop.index0 }}"></span>{% endfor %}
+    </div>
+    <p class="cine-loader" id="cine-loader" role="status" hidden><span class="spin" aria-hidden="true"></span><span>Carregando imagens</span></p>
+    <p class="cine-hint" aria-hidden="true"><span></span>Role para descobrir</p>
+    <a class="cine-skip" href="#loja">Pular para a loja</a>
+  </div>
+</section>
+{% endif %}
+
+<section class="shop" id="loja" aria-labelledby="loja-title">
+  <div class="wrap">
+    <header class="shop-head">
+      <p class="eyebrow">A loja</p>
+      <h2 id="loja-title">Nossos cafés</h2>
+      <p class="muted">Escolha o tamanho, adicione ao carrinho e registre o seu pedido. A EAJ confirma pagamento e entrega com você.</p>
+    </header>
+
+    {% if products %}
+    <div class="products">
+      {% for p in products %}
+      <article class="product{% if p.available <= 0 %} is-out{% endif %}" data-product='{{ {"id": p.id, "name": p.name, "price_cents": p.price_cents, "image": url_for("static", filename=p.image), "available": p.available} | tojson }}'>
+        <a class="product-media" href="{{ url_for('shop.product', slug=p.slug) }}" tabindex="-1" aria-hidden="true">
+          <img src="{{ url_for('static', filename=p.image) }}" alt="" width="900" height="900" loading="lazy">
+          <span class="product-weight">{{ p.weight_grams | grams }}</span>
+        </a>
+        <div class="product-body">
+          <h3><a href="{{ url_for('shop.product', slug=p.slug) }}">{{ p.name }}</a></h3>
+          <p class="product-desc muted">{{ p.description }}</p>
+          <div class="product-row">
+            <p class="price">{{ p.price_cents | brl }}</p>
+            <p class="stock {% if p.available <= 0 %}out{% elif p.low %}low{% endif %}">
+              {% if p.available <= 0 %}Esgotado no momento{% elif p.low %}Últimas unidades{% else %}Disponível{% endif %}
+            </p>
+          </div>
+          {% if p.available > 0 %}
+          <div class="buy">
+            <div class="qty" role="group" aria-label="Quantidade de {{ p.name }}">
+              <button type="button" data-step="-1" aria-label="Diminuir quantidade">−</button>
+              <input type="number" inputmode="numeric" min="1" max="{{ [p.available, 50] | min }}" value="1" aria-label="Quantidade">
+              <button type="button" data-step="1" aria-label="Aumentar quantidade">+</button>
+            </div>
+            <button class="btn btn-gold add-cart" type="button">Adicionar ao carrinho</button>
+          </div>
+          {% else %}
+          <p class="muted small">Assim que houver estoque, ele aparece aqui.</p>
+          {% endif %}
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty"><p>Nenhum café disponível no momento. Volte em breve.</p></div>
+    {% endif %}
+  </div>
+</section>
+
+<section class="how" aria-labelledby="how-title">
+  <div class="wrap">
+    <header class="shop-head">
+      <p class="eyebrow">Como funciona</p>
+      <h2 id="how-title">Do pedido à sua xícara</h2>
+    </header>
+    <ol class="how-steps">
+      <li><span>1</span><h3>Escolha o seu café</h3><p class="muted">Adicione os tamanhos e as quantidades ao carrinho.</p></li>
+      <li><span>2</span><h3>Registre o pedido</h3><p class="muted">Informe seus dados de contato e o endereço de entrega. Você recebe o número do pedido na hora.</p></li>
+      <li><span>3</span><h3>Pagamento e entrega</h3><p class="muted">
+        {% if payment_configured %}Conclua o pagamento pelo método disponível.{% else %}A EAJ entra em contato para combinar o pagamento e a entrega. O pedido só é confirmado depois do pagamento.{% endif %}
+      </p></li>
+    </ol>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}<script src="{{ url_for('static', filename='js/cine.js') }}" defer></script>{% endblock %}

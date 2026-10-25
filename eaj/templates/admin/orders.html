@@ -1,0 +1,40 @@
+{% extends 'admin/base.html' %}
+{% from 'admin/_macros.html' import pager with context %}
+{% block title %}Pedidos{% endblock %}
+{% block content %}
+<header class="ph"><div><p class="eyebrow">Operação</p><h1>Pedidos</h1>
+  <p class="muted">Filtre por status, período de registro ou busque por número, nome ou e-mail.</p></div></header>
+
+<form class="filters" method="get" role="search">
+  <div class="field"><label for="f-status">Status</label>
+    <select class="input" id="f-status" name="status">
+      <option value="">Todos</option>
+      <option value="abertos" {% if f.status == 'abertos' %}selected{% endif %}>Em aberto</option>
+      {% for k, v in STATUS.items() %}<option value="{{ k }}" {% if f.status == k %}selected{% endif %}>{{ v }}</option>{% endfor %}
+    </select></div>
+  <div class="field"><label for="f-start">De</label><input class="input" type="date" id="f-start" name="start" value="{{ f.start }}"></div>
+  <div class="field"><label for="f-end">Até</label><input class="input" type="date" id="f-end" name="end" value="{{ f.end }}"></div>
+  <div class="field grow"><label for="f-q">Buscar</label><input class="input" id="f-q" name="q" value="{{ f.q }}" placeholder="EAJ-2026-00001, nome ou e-mail"></div>
+  <button class="btn btn-gold btn-sm" type="submit">Filtrar</button>
+  {% if f.status or f.start or f.end or f.q %}<a class="btn btn-sm" href="{{ url_for('admin.order_list') }}">Limpar</a>{% endif %}
+</form>
+
+{% if rows %}
+<div class="tbl-wrap"><table class="tbl">
+  <thead><tr><th>Pedido</th><th>Cliente</th><th>Registrado em</th><th>Pago em</th><th>Status</th><th class="r">Itens</th><th class="r">Total</th></tr></thead>
+  <tbody>
+  {% for o in rows %}<tr>
+    <td><a href="{{ url_for('admin.order_detail', oid=o.id) }}">{{ o.code }}</a></td>
+    <td>{{ o.customer_name }}<br><span class="faint small">{{ o.customer_email }}</span></td>
+    <td>{{ o.created_at | datetime_br }}</td><td>{{ o.paid_at | datetime_br }}</td>
+    <td><span class="badge st-{{ o.status }}">{{ STATUS[o.status] }}</span>{% if o.shipping_to_arrange %}<br><span class="faint small">frete a combinar</span>{% endif %}</td>
+    <td class="r">{{ o.subtotal_cents | brl }}</td><td class="r"><b>{{ o.total_cents | brl }}</b></td>
+  </tr>{% endfor %}
+  </tbody>
+  <tfoot><tr><td colspan="6">Soma dos pedidos filtrados (todas as páginas)</td><td class="r">{{ sums | brl }}</td></tr></tfoot>
+</table></div>
+{{ pager(page, pages, total, 'pedido(s)') }}
+{% else %}
+<div class="empty"><h3>Nenhum pedido encontrado</h3><p>{% if f.status or f.start or f.end or f.q %}Nenhum pedido corresponde aos filtros.{% else %}Os pedidos feitos na loja aparecem aqui.{% endif %}</p></div>
+{% endif %}
+{% endblock %}

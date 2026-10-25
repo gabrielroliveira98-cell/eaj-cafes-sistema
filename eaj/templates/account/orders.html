@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% block title %}Meus pedidos · EAJ Cafés Especiais{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/shop.css') }}">{% endblock %}
+{% block content %}
+<section class="page">
+  <div class="wrap">
+    <header class="page-head" style="display:flex;justify-content:space-between;align-items:end;gap:20px;flex-wrap:wrap;max-width:none">
+      <div><p class="eyebrow">Olá, {{ current_user['name'].split(' ')[0] }}</p><h1>Meus pedidos</h1></div>
+      <form method="post" action="{{ url_for('account.logout') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn btn-sm" type="submit">Sair da conta</button></form>
+    </header>
+    {% if rows %}
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <thead><tr><th>Pedido</th><th>Data</th><th>Status</th><th class="r">Total</th></tr></thead>
+        <tbody>
+          {% for o in rows %}
+          <tr><td><a href="{{ url_for('shop.order', code=o.code) }}">{{ o.code }}</a></td><td>{{ o.created_at | datetime_br }}</td>
+            <td><span class="badge st-{{ o.status }}">{{ STATUS[o.status] }}</span></td>
+            <td class="r">{{ o.total_cents | brl }}{% if o.shipping_to_arrange %} + frete{% endif %}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty"><h3>Nenhum pedido ainda</h3><p>Quando você fizer um pedido, ele aparece aqui com o andamento.</p>
+      <a class="btn btn-gold" href="{{ url_for('shop.index') }}#loja">Ver os cafés</a></div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

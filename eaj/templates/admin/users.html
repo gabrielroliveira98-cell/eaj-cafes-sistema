@@ -1,0 +1,59 @@
+{% extends 'admin/base.html' %}
+{% from 'admin/_macros.html' import csrf with context %}
+{% block title %}Usuários e permissões{% endblock %}
+{% block content %}
+<header class="ph"><div><p class="eyebrow">Configuração</p><h1>Usuários e permissões</h1>
+  <p class="muted">Administradores têm acesso total. Analistas e demais membros da equipe acessam apenas as áreas marcadas.</p></div>
+  <nav class="seg-tabs" aria-label="Tipo de usuário">
+    <a href="{{ url_for('admin.users') }}" {% if role != 'cliente' %}aria-current="true"{% endif %}>Equipe</a>
+    <a href="{{ url_for('admin.users', role='cliente') }}" {% if role == 'cliente' %}aria-current="true"{% endif %}>Clientes</a>
+  </nav>
+</header>
+
+{% if role == 'cliente' %}
+{% if rows %}
+<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Nome</th><th>E-mail</th><th>Cadastro</th><th>Último acesso</th><th>Situação</th></tr></thead>
+<tbody>{% for u in rows %}<tr><td>{{ u.name }}</td><td>{{ u.email }}</td><td>{{ u.created_at | date_br }}</td><td>{{ u.last_login_at | datetime_br }}</td>
+  <td><form method="post" action="{{ url_for('admin.user_update', uid=u.id) }}">{{ csrf() }}
+    <label class="check"><input type="checkbox" name="active" value="1" {% if u.active %}checked{% endif %} onchange="this.form.submit()"><span>{{ 'Ativo' if u.active else 'Bloqueado' }}</span></label>
+    <noscript><button class="btn btn-sm" type="submit">Salvar</button></noscript></form></td></tr>{% endfor %}</tbody></table></div>
+{% else %}<div class="empty"><p>Nenhum cliente com conta cadastrada.</p></div>{% endif %}
+{% else %}
+<div class="stack">
+  {% for u in rows %}
+  <div class="card">
+    <div class="card-head"><div><h2 style="margin:0">{{ u.name }}</h2><p class="faint small">{{ u.email }} · último acesso {{ u.last_login_at | datetime_br }}</p></div>
+      {% if not u.active %}<span class="badge st-cancelado">desativado</span>{% endif %}</div>
+    <form method="post" action="{{ url_for('admin.user_update', uid=u.id) }}">{{ csrf() }}
+      <div class="form-grid">
+        <div class="field"><label for="r{{ u.id }}">Perfil</label><select class="input" id="r{{ u.id }}" name="role">
+          <option value="admin" {% if u.role == 'admin' %}selected{% endif %}>Administrador (acesso total)</option>
+          <option value="analista" {% if u.role == 'analista' %}selected{% endif %}>Analista / equipe</option></select></div>
+        <label class="check" style="align-self:end"><input type="checkbox" name="active" value="1" {% if u.active %}checked{% endif %}><span>Usuário ativo</span></label>
+      </div>
+      <fieldset style="border:0;padding:0;margin:18px 0 0"><legend class="faint small" style="margin-bottom:10px">Permissões (válidas para o perfil analista)</legend>
+        <div class="perm-grid">{% for k, v in PERMISSIONS.items() %}<label class="check"><input type="checkbox" name="perms" value="{{ k }}" {% if k in (u.permissions or '').split(',') %}checked{% endif %}><span>{{ v }}</span></label>{% endfor %}</div>
+      </fieldset>
+      <div class="form-actions"><button class="btn btn-sm" type="submit">Salvar</button></div>
+    </form>
+    <details class="disclose" style="margin-top:12px"><summary>Redefinir senha</summary><div>
+      <form class="inline-form" method="post" action="{{ url_for('admin.user_password', uid=u.id) }}" data-confirm="Redefinir a senha de {{ u.name }}?">{{ csrf() }}
+        <div class="field"><label for="pw{{ u.id }}">Nova senha</label><input class="input" id="pw{{ u.id }}" name="password" type="password" autocomplete="new-password" required minlength="10"></div>
+        <button class="btn btn-sm" type="submit">Redefinir</button></form></div></details>
+  </div>
+  {% endfor %}
+  <form class="card" method="post" action="{{ url_for('admin.user_create') }}">{{ csrf() }}
+    <h2>Novo usuário da equipe</h2>
+    <div class="form-grid">
+      <div class="field"><label for="nu-n">Nome</label><input class="input" id="nu-n" name="name" required></div>
+      <div class="field"><label for="nu-e">E-mail</label><input class="input" id="nu-e" name="email" type="email" required autocomplete="off"></div>
+      <div class="field"><label for="nu-r">Perfil</label><select class="input" id="nu-r" name="role"><option value="analista">Analista / equipe</option><option value="admin">Administrador</option></select></div>
+      <div class="field"><label for="nu-p">Senha inicial</label><input class="input" id="nu-p" name="password" type="password" required minlength="10" autocomplete="new-password"><span class="hint">Mínimo de 10 caracteres, com letras e números.</span></div>
+    </div>
+    <fieldset style="border:0;padding:0;margin:18px 0 0"><legend class="faint small" style="margin-bottom:10px">Permissões (padrão do analista: painel de análise)</legend>
+      <div class="perm-grid">{% for k, v in PERMISSIONS.items() %}<label class="check"><input type="checkbox" name="perms" value="{{ k }}" {% if k == 'bi' %}checked{% endif %}><span>{{ v }}</span></label>{% endfor %}</div></fieldset>
+    <div class="form-actions"><button class="btn btn-gold btn-sm" type="submit">Criar usuário</button></div>
+  </form>
+</div>
+{% endif %}
+{% endblock %}

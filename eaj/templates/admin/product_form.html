@@ -1,0 +1,50 @@
+{% extends 'admin/base.html' %}
+{% from 'admin/_macros.html' import field, csrf with context %}
+{% block title %}{{ p.name if p else 'Novo produto' }}{% endblock %}
+{% set src = form if form else (p or {}) %}
+{% block content %}
+<a class="back link small" href="{{ url_for('admin.products') }}">← Produtos</a>
+<header class="ph" style="margin-top:14px"><div><p class="eyebrow">Catálogo</p><h1>{{ p.name if p else 'Novo produto' }}</h1></div></header>
+<div class="grid-2 wide-left">
+  <form class="card form-card" method="post" enctype="multipart/form-data">{{ csrf() }}
+    {% if errors.get('form') %}<p class="notice bad" style="margin-bottom:18px">{{ errors.form }}</p>{% endif %}
+    <div class="form-grid">
+      {{ field('name', 'Nome', src.get('name', ''), errors=errors, attrs='required maxlength="120"', span=True) }}
+      {{ field('weight_grams', 'Peso (gramas)', src.get('weight_grams', ''), 'number', errors, attrs='required min="1" step="1"') }}
+      {{ field('price', 'Preço de venda (R$)', form.get('price') if form else (p.price_cents | money_input if p else ''), errors=errors, attrs='required inputmode="decimal"') }}
+      {{ field('unit_cost', 'Custo unitário (R$)', form.get('unit_cost') if form else (p.unit_cost_cents | money_input if p and p.unit_cost_cents is not none else ''), errors=errors,
+               hint='Custo de cada unidade pronta para venda (café, torra, embalagem). Deixe vazio se ainda não souber.', attrs='inputmode="decimal"') }}
+      {{ field('low_stock_threshold', 'Alerta de estoque baixo (unidades)', src.get('low_stock_threshold', 0), 'number', errors, attrs='min="0" step="1"') }}
+      <div class="field span-all"><label for="x-description">Descrição</label>
+        <textarea class="input" id="x-description" name="description" maxlength="800">{{ src.get('description', '') }}</textarea>
+        <span class="hint">Use apenas informações confirmadas pela EAJ.</span></div>
+      <div class="field span-all"><label for="x-image">Imagem {% if p %}(opcional, substitui a atual){% endif %}</label>
+        <input class="input" id="x-image" name="image" type="file" accept="image/jpeg,image/png,image/webp"><span class="hint">JPG, PNG ou WEBP de até {{ config.MAX_CONTENT_LENGTH // 1048576 }} MB.</span></div>
+      {% if p %}{{ field('change_note', 'Motivo da alteração de preço ou custo (opcional)', '', errors=errors, span=True, attrs='maxlength="200"') }}{% endif %}
+      <label class="check span-all"><input type="checkbox" name="active" value="1" {% if (form and form.get('active')) or (not form and (not p or p.active)) %}checked{% endif %}>
+        <span>Produto ativo (aparece na loja)</span></label>
+    </div>
+    <div class="form-actions"><button class="btn btn-gold" type="submit">Salvar</button><a class="btn" href="{{ url_for('admin.products') }}">Voltar</a></div>
+  </form>
+  {% if p %}
+  <div class="stack">
+    <div class="card">
+      <h2>Resumo</h2>
+      <img src="{{ url_for('static', filename=p.image) }}" alt="Imagem atual do produto" style="border-radius:var(--r-sm);margin-bottom:14px;aspect-ratio:1;object-fit:cover;width:100%" width="400" height="400">
+      <ul class="mini-list">
+        <li><span class="muted">Margem bruta estimada</span><b>{% if margin[0] is none %}—{% else %}{{ margin[0] | brl }} ({{ margin[1] | pct }}){% endif %}</b></li>
+        <li><span class="muted">Estoque físico</span><b>{{ p.stock_on_hand }}</b></li>
+        <li><span class="muted">Reservado em pedidos</span><b>{{ p.stock_reserved }}</b></li>
+        <li><span class="muted">Disponível para venda</span><b>{{ p.stock_on_hand - p.stock_reserved }}</b></li>
+      </ul>
+      {% if has_perm('estoque') %}<a class="btn btn-sm" style="margin-top:14px" href="{{ url_for('admin.stock', product=p.id) }}">Movimentar estoque</a>{% endif %}
+    </div>
+    <div class="card">
+      <h2>Histórico de preços</h2>
+      <ul class="mini-list">{% for h in history %}<li><span>{{ h.changed_at | datetime_br }}<br><span class="faint small">{{ h.note }} · {{ h.user_name or 'sistema' }}</span></span>
+        <span style="text-align:right">{{ h.price_cents | brl }}<br><span class="faint small">custo {{ h.unit_cost_cents | brl if h.unit_cost_cents is not none else 'não informado' }}</span></span></li>{% endfor %}</ul>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

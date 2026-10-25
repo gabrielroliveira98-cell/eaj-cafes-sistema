@@ -1,0 +1,26 @@
+{% extends 'admin/base.html' %}
+{% from 'admin/_macros.html' import csrf with context %}
+{% block title %}Categorias financeiras{% endblock %}
+{% block content %}
+<a class="back link small" href="{{ url_for('admin.finance_list') }}">← Lançamentos</a>
+<header class="ph" style="margin-top:14px"><div><p class="eyebrow">Finanças</p><h1>Categorias</h1>
+  <p class="muted">O tipo define como a categoria entra no resultado. Categorias com lançamentos não são excluídas, apenas desativadas.</p></div></header>
+<div class="grid-2 wide-left">
+  <div class="tbl-wrap"><table class="tbl">
+    <thead><tr><th>Categoria</th><th>Tipo</th><th class="r">Lançamentos</th><th>Situação</th><th></th></tr></thead>
+    <tbody>{% for c in rows %}<tr><td>{{ c.name }}</td><td>{{ KINDS[c.kind] }}</td><td class="r">{{ c.uses }}</td>
+      <td>{% if c.active %}<span class="badge st-entregue">ativa</span>{% else %}<span class="badge">inativa</span>{% endif %}</td>
+      <td class="r"><form method="post" action="{{ url_for('admin.finance_category') }}">{{ csrf() }}<input type="hidden" name="toggle" value="{{ c.id }}">
+        <button class="link small" type="submit">{{ 'Desativar' if c.active else 'Ativar' }}</button></form></td></tr>{% endfor %}</tbody>
+  </table></div>
+  <form class="card" method="post" action="{{ url_for('admin.finance_category') }}">{{ csrf() }}
+    <h2>Nova categoria</h2>
+    <div class="stack">
+      <div class="field"><label for="c-name">Nome</label><input class="input" id="c-name" name="name" required maxlength="80"></div>
+      <div class="field"><label for="c-kind">Tipo</label><select class="input" id="c-kind" name="kind" required>
+        {% for k, v in KINDS.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select></div>
+    </div>
+    <div class="form-actions"><button class="btn btn-gold" type="submit">Criar categoria</button></div>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,49 @@
+{% extends 'admin/base.html' %}
+{% from 'admin/_macros.html' import pager with context %}
+{% block title %}Lançamentos financeiros{% endblock %}
+{% block content %}
+<header class="ph"><div><p class="eyebrow">Finanças</p><h1>Lançamentos</h1>
+  <p class="muted">Despesas fixas e variáveis, compras de mercadoria, custos operacionais, impostos e outras receitas. O período filtra pela data de competência.</p></div>
+  <div class="ph-actions"><a class="btn btn-sm" href="{{ url_for('admin.finance_categories') }}">Categorias</a><a class="btn btn-gold btn-sm" href="{{ url_for('admin.finance_new') }}">Novo lançamento</a></div>
+</header>
+
+<form class="filters" method="get" role="search">
+  <div class="field"><label for="f-start">Competência de</label><input class="input" type="date" id="f-start" name="start" value="{{ f.start }}"></div>
+  <div class="field"><label for="f-end">até</label><input class="input" type="date" id="f-end" name="end" value="{{ f.end }}"></div>
+  <div class="field"><label for="f-kind">Tipo</label><select class="input" id="f-kind" name="kind"><option value="">Todos</option>
+    {% for k, v in KINDS.items() %}<option value="{{ k }}" {% if f.kind == k %}selected{% endif %}>{{ v }}</option>{% endfor %}</select></div>
+  <div class="field"><label for="f-cat">Categoria</label><select class="input" id="f-cat" name="category"><option value="">Todas</option>
+    {% for c in cats %}<option value="{{ c.id }}" {% if f.category == c.id %}selected{% endif %}>{{ c.name }}</option>{% endfor %}</select></div>
+  <div class="field"><label for="f-st">Status</label><select class="input" id="f-st" name="status"><option value="">Todos</option>
+    {% for k, v in STATUS.items() %}<option value="{{ k }}" {% if f.status == k %}selected{% endif %}>{{ v }}</option>{% endfor %}</select></div>
+  <div class="field grow"><label for="f-q">Descrição</label><input class="input" id="f-q" name="q" value="{{ f.q }}"></div>
+  <button class="btn btn-gold btn-sm" type="submit">Filtrar</button>
+</form>
+
+<div class="kpis" style="margin-bottom:20px">
+  <div class="kpi"><p class="lbl">Saídas previstas</p><p class="val">{{ res.sum_previsto | brl }}</p><p class="sub">Ainda não pagas (filtro atual)</p></div>
+  <div class="kpi"><p class="lbl">Saídas realizadas</p><p class="val">{{ res.sum_realizado | brl }}</p><p class="sub">Efetivamente pagas (filtro atual)</p></div>
+  <div class="kpi"><p class="lbl">Outras receitas</p><p class="val">{{ res.sum_income | brl }}</p><p class="sub">Previstas + recebidas</p></div>
+  <div class="kpi lead"><p class="lbl">Resultado líquido estimado do período{% if dre.estimated %}<span class="est">estimativa</span>{% endif %}</p>
+    <p class="val {{ 'pos' if dre.net_result > 0 else ('neg' if dre.net_result < 0 else '') }}">{{ dre.net_result | brl }}</p>
+    <p class="sub">Receita {{ dre.gross_revenue | brl }} − impostos − CPV − despesas operacionais + outras receitas</p></div>
+</div>
+
+{% if res.rows %}
+<div class="tbl-wrap"><table class="tbl">
+  <thead><tr><th>Competência</th><th>Descrição</th><th>Categoria</th><th>Vencimento</th><th>Pago/recebido em</th><th>Status</th><th class="r">Valor</th></tr></thead>
+  <tbody>{% for e in res.rows %}<tr>
+    <td>{{ e.competence_date | date_br }}</td>
+    <td><a href="{{ url_for('admin.finance_edit', eid=e.id) }}">{{ e.description }}</a></td>
+    <td>{{ e.category }}<br><span class="faint small">{{ KINDS[e.kind] }}</span></td>
+    <td>{{ e.due_date | date_br }}</td><td>{{ e.settled_date | date_br }}</td>
+    <td><span class="badge {{ 'st-entregue' if e.status == 'realizado' else ('st-cancelado' if e.status == 'cancelado' else 'st-aguardando_pagamento') }}">{{ STATUS[e.status] }}</span></td>
+    <td class="r {{ 'pos' if e.kind == 'outra_receita' else '' }}">{{ ('+' if e.kind == 'outra_receita' else '') }}{{ e.amount_cents | brl }}</td>
+  </tr>{% endfor %}</tbody>
+</table></div>
+{{ pager(res.page, res.pages, res.total, 'lançamento(s)') }}
+{% else %}
+<div class="empty"><h3>Nenhum lançamento no período</h3><p>Registre despesas, compras e impostos para que o resultado reflita a operação real.</p>
+  <a class="btn btn-gold" href="{{ url_for('admin.finance_new') }}">Registrar lançamento</a></div>
+{% endif %}
+{% endblock %}

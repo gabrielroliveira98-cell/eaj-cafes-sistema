@@ -1,0 +1,32 @@
+{% extends 'admin/base.html' %}
+{% from 'admin/_macros.html' import csrf with context %}
+{% block title %}Formas de entrega{% endblock %}
+{% block content %}
+<header class="ph"><div><p class="eyebrow">Configuração</p><h1>Formas de entrega</h1>
+  <p class="muted">Cadastre as opções e os valores reais de entrega. Use "a combinar" quando o valor depender de cada pedido; nesse caso você define o frete na tela do pedido antes do pagamento.</p></div></header>
+<div class="stack">
+  {% for s in rows %}
+  <form class="card" method="post">{{ csrf() }}<input type="hidden" name="id" value="{{ s.id }}">
+    <div class="form-grid">
+      <div class="field"><label for="n{{ s.id }}">Nome</label><input class="input" id="n{{ s.id }}" name="name" value="{{ s.name }}" required maxlength="80"></div>
+      <div class="field"><label for="p{{ s.id }}">Valor (R$)</label><input class="input" id="p{{ s.id }}" name="price" value="{{ s.price_cents | money_input }}" inputmode="decimal" placeholder="—"></div>
+      <div class="field span-all"><label for="d{{ s.id }}">Descrição para o cliente</label><input class="input" id="d{{ s.id }}" name="description" value="{{ s.description }}" maxlength="200"></div>
+      <label class="check"><input type="checkbox" name="to_arrange" value="1" {% if s.price_cents is none %}checked{% endif %}><span>Valor a combinar</span></label>
+      <label class="check"><input type="checkbox" name="active" value="1" {% if s.active %}checked{% endif %}><span>Ativa na loja</span></label>
+    </div>
+    <div class="form-actions"><button class="btn btn-sm" type="submit">Salvar</button></div>
+  </form>
+  {% endfor %}
+  <form class="card" method="post">{{ csrf() }}
+    <h2>Nova forma de entrega</h2>
+    <div class="form-grid">
+      <div class="field"><label for="nn">Nome</label><input class="input" id="nn" name="name" required maxlength="80" placeholder="Ex.: Retirada, Entrega local"></div>
+      <div class="field"><label for="np">Valor (R$)</label><input class="input" id="np" name="price" inputmode="decimal" placeholder="0,00"></div>
+      <div class="field span-all"><label for="nd">Descrição para o cliente</label><input class="input" id="nd" name="description" maxlength="200"></div>
+      <label class="check"><input type="checkbox" name="to_arrange" value="1"><span>Valor a combinar</span></label>
+      <label class="check"><input type="checkbox" name="active" value="1" checked><span>Ativa na loja</span></label>
+    </div>
+    <div class="form-actions"><button class="btn btn-gold btn-sm" type="submit">Adicionar</button></div>
+  </form>
+</div>
+{% endblock %}

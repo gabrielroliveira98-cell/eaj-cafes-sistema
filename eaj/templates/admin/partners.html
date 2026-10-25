@@ -1,0 +1,101 @@
+{% extends 'admin/base.html' %}
+{% from 'admin/_macros.html' import csrf with context %}
+{% block title %}Sócios e distribuição{% endblock %}
+{% set d = sim.dre %}
+{% block content %}
+<header class="ph"><div><p class="eyebrow">Finanças</p><h1>Sócios e distribuição</h1>
+  <p class="muted">A participação de cada sócio se aplica ao <b>valor aprovado para distribuição</b>, nunca à receita bruta. O sistema registra as decisões, mas não faz transferências bancárias. Esta simulação não substitui a orientação contábil da empresa.</p></div></header>
+
+<div class="grid-2">
+  <form class="card" method="post" action="{{ url_for('admin.partners_shares') }}">{{ csrf() }}
+    <div class="card-head"><h2>Participação societária</h2></div>
+    <ul class="mini-list">
+      {% for p in partners %}<li><label for="sh-{{ p.id }}">{{ p.name }}</label>
+        <span style="display:flex;align-items:center;gap:8px"><input class="input" id="sh-{{ p.id }}" name="share_{{ p.id }}" value="{{ p.share_bp | pct_input }}" inputmode="decimal" style="width:90px;min-height:38px;text-align:right" required>%</span></li>{% endfor %}
+    </ul>
+    <div class="form-actions"><button class="btn btn-sm" type="submit" data-x>Salvar participação</button><span class="faint small">A soma precisa ser 100%.</span></div>
+  </form>
+  <div class="card">
+    <div class="card-head"><h2>Reserva de caixa</h2></div>
+    <p class="val" style="font-family:var(--serif);font-size:34px">{{ balance | brl }}</p>
+    <p class="faint small">Saldo acumulado das reservas constituídas nas distribuições, menos os usos registrados.</p>
+    <form class="inline-form" method="post" action="{{ url_for('admin.partners_reserve_default') }}" style="margin-top:16px">{{ csrf() }}
+      <div class="field"><label for="rp">Percentual padrão de reserva</label><input class="input" id="rp" name="reserve" value="{{ saved_reserve_bp | pct_input }}" inputmode="decimal" required></div>
+      <button class="btn btn-sm" type="submit">Salvar</button>
+    </form>
+    <details class="disclose" style="margin-top:16px"><summary>Registrar uso da reserva</summary><div>
+      <form class="inline-form" method="post" action="{{ url_for('admin.partners_reserve_use') }}">{{ csrf() }}
+        <div class="field"><label for="ru-a">Valor (R$)</label><input class="input" id="ru-a" name="amount" inputmode="decimal" required></div>
+        <div class="field"><label for="ru-n">Finalidade</label><input class="input" id="ru-n" name="note" required maxlength="300"></div>
+        <button class="btn btn-sm" type="submit">Registrar</button>
+      </form></div></details>
+  </div>
+</div>
+
+<h2 class="section-title">Simulação de distribuição</h2>
+<form class="filters" method="get">
+  <div class="field"><label for="s-start">Período de</label><input class="input" type="date" id="s-start" name="start" value="{{ sim.start.isoformat() }}"></div>
+  <div class="field"><label for="s-end">até</label><input class="input" type="date" id="s-end" name="end" value="{{ sim.end.isoformat() }}"></div>
+  <div class="field{% if errors.get('reserve') %} has-err{% endif %}"><label for="s-res">Reserva (% do resultado)</label><input class="input" id="s-res" name="reserve" value="{{ sim.reserve_bp | pct_input }}" inputmode="decimal">
+    {% if errors.get('reserve') %}<span class="err">{{ errors.reserve }}</span>{% endif %}</div>
+  <div class="field{% if errors.get('base') %} has-err{% endif %}"><label for="s-base">Base aprovada (R$, opcional)</label><input class="input" id="s-base" name="base" value="{{ base_input }}" inputmode="decimal" placeholder="= disponível">
+    {% if errors.get('base') %}<span class="err">{{ errors.base }}</span>{% endif %}</div>
+  <button class="btn btn-gold btn-sm" type="submit">Simular</button>
+</form>
+
+<div class="grid-2 wide-left">
+  <div class="card">
+    <h2>Do faturamento ao valor distribuível</h2>
+    <ul class="dre">
+      <li><span>Receita bruta</span><b>{{ d.gross_revenue | brl }}</b></li>
+      <li class="sub"><span>(−) Impostos registrados</span><b>{{ (-d.deductions) | brl }}</b></li>
+      <li class="sub"><span>(−) Custo dos produtos vendidos</span><b>{{ (-d.cogs) | brl }}</b></li>
+      <li><span>Lucro bruto</span><b>{{ d.gross_profit | brl }}</b></li>
+      <li class="sub"><span>(−) Despesas operacionais</span><b>{{ (-d.opex) | brl }}</b></li>
+      <li class="sub"><span>(+) Outras receitas</span><b>{{ d.other_income | brl }}</b></li>
+      <li class="total"><span>Resultado líquido estimado{% if d.estimated %}<span class="est">estimativa</span>{% endif %}</span><b class="{{ 'pos' if d.net_result > 0 else ('neg' if d.net_result < 0 else '') }}">{{ d.net_result | brl }}</b></li>
+      <li class="sub"><span>(−) Reserva de caixa ({{ sim.reserve_bp | pct }})</span><b>{{ (-sim.reserve_cents) | brl }}</b></li>
+      <li><span>Valor disponível para distribuição</span><b>{{ sim.available_cents | brl }}</b></li>
+      <li class="total"><span>Base aprovada para distribuição</span><b>{{ sim.base_cents | brl }}</b></li>
+    </ul>
+    {% for w in sim.warnings %}<p class="notice warn" style="margin-top:12px">{{ w }}</p>{% endfor %}
+  </div>
+  <div class="card">
+    <h2>Divisão entre os sócios</h2>
+    <ul class="mini-list">{% for s in sim.shares %}<li><span>{{ s.name }} <span class="faint small">({{ s.share_bp | pct }})</span></span><b style="font-family:var(--serif);font-weight:400;font-size:22px">{{ s.amount_cents | brl }}</b></li>{% endfor %}</ul>
+    {% if sim.can_approve %}
+    <form method="post" action="{{ url_for('admin.partners_approve') }}" style="margin-top:18px">{{ csrf() }}
+      <input type="hidden" name="start" value="{{ sim.start.isoformat() }}"><input type="hidden" name="end" value="{{ sim.end.isoformat() }}">
+      <input type="hidden" name="reserve" value="{{ sim.reserve_bp | pct_input }}"><input type="hidden" name="base" value="{{ sim.base_cents | money_input }}">
+      <div class="field"><label for="ap-n">Observações da aprovação</label><input class="input" id="ap-n" name="notes" maxlength="600" placeholder="Ex.: aprovado em reunião de sócios"></div>
+      <label class="check" style="margin-top:12px"><input type="checkbox" name="confirm" value="1" required><span>Os sócios aprovaram esta distribuição. Entendo que o sistema não transfere valores.</span></label>
+      <div class="form-actions"><button class="btn btn-gold" type="submit">Registrar distribuição aprovada</button></div>
+    </form>
+    {% else %}<p class="muted small" style="margin-top:14px">A aprovação fica disponível quando há resultado positivo, base válida e nenhum período sobreposto já distribuído.</p>{% endif %}
+  </div>
+</div>
+
+<h2 class="section-title">Distribuições registradas</h2>
+{% if dists %}
+<div class="tbl-wrap"><table class="tbl">
+  <thead><tr><th>Período</th><th class="r">Resultado</th><th class="r">Reserva</th><th class="r">Base aprovada</th><th>Divisão</th><th>Aprovada por</th><th>Situação</th><th></th></tr></thead>
+  <tbody>{% for x in dists %}<tr>
+    <td>{{ x.period_start | date_br }} a {{ x.period_end | date_br }}</td><td class="r">{{ x.net_result_cents | brl }}</td>
+    <td class="r">{{ x.reserve_cents | brl }}<br><span class="faint small">{{ x.reserve_bp | pct }}</span></td><td class="r"><b>{{ x.approved_base_cents | brl }}</b></td>
+    <td>{% for s in shares[x.id] %}{{ s.partner_name }}: {{ s.amount_cents | brl }}<br>{% endfor %}</td>
+    <td>{{ x.user_name or '—' }}<br><span class="faint small">{{ x.approved_at | datetime_br }}</span></td>
+    <td><span class="badge {{ 'st-entregue' if x.status == 'aprovada' else 'st-cancelado' }}">{{ x.status }}</span>{% if x.notes %}<br><span class="faint small">{{ x.notes }}</span>{% endif %}</td>
+    <td>{% if x.status == 'aprovada' %}<details class="disclose"><summary>Cancelar</summary><div>
+      <form method="post" action="{{ url_for('admin.partners_cancel', did=x.id) }}" data-confirm="Cancelar esta distribuição? A reserva vinculada será estornada.">{{ csrf() }}
+        <input class="input" name="reason" placeholder="Motivo" required maxlength="300"><button class="btn btn-danger btn-sm" style="margin-top:8px" type="submit">Cancelar</button></form></div></details>{% endif %}</td>
+  </tr>{% endfor %}</tbody>
+</table></div>
+{% else %}<div class="empty"><p>Nenhuma distribuição registrada ainda.</p></div>{% endif %}
+
+{% if reserves %}
+<h2 class="section-title">Movimentos da reserva</h2>
+<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Data</th><th>Tipo</th><th>Descrição</th><th>Responsável</th><th class="r">Valor</th></tr></thead>
+  <tbody>{% for r in reserves %}<tr><td>{{ r.created_at | datetime_br }}</td><td>{{ {'constituicao': 'Constituição', 'uso': 'Uso', 'estorno': 'Estorno'}[r.kind] }}</td><td>{{ r.note }}</td><td>{{ r.user_name or '—' }}</td>
+    <td class="r {{ 'pos' if r.kind == 'constituicao' else 'neg' }}">{{ (r.amount_cents if r.kind == 'constituicao' else -r.amount_cents) | brl }}</td></tr>{% endfor %}</tbody></table></div>
+{% endif %}
+{% endblock %}

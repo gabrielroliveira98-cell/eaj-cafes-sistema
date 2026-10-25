@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% block title %}Consultar pedido · EAJ Cafés Especiais{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/shop.css') }}">{% endblock %}
+{% block content %}
+<section class="page">
+  <div class="wrap narrow">
+    <div class="card auth-card">
+      <p class="eyebrow">Acompanhar</p>
+      <h1>Consultar pedido</h1>
+      <p class="muted">Use o número que aparece na confirmação (por exemplo, EAJ-2026-00012) e o e-mail informado no pedido.</p>
+      <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="field"><label for="l-code">Número do pedido</label>
+          <input class="input" id="l-code" name="code" value="{{ form.get('code', '') }}" required autocomplete="off" style="text-transform:uppercase"></div>
+        <div class="field"><label for="l-email">E-mail</label>
+          <input class="input" id="l-email" name="email" type="email" value="{{ form.get('email', '') }}" required autocomplete="email"></div>
+        <button class="btn btn-gold btn-block" type="submit">Consultar</button>
+      </form>
+      <p class="auth-alt">Tem conta? <a href="{{ url_for('account.login') }}">Entre</a> para ver todos os seus pedidos.</p>
+    </div>
+  </div>
+</section>
+{% endblock %}

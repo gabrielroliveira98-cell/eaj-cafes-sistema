@@ -1,0 +1,23 @@
+{% extends 'admin/base.html' %}
+{% block title %}Produtos e preços{% endblock %}
+{% block content %}
+<header class="ph"><div><p class="eyebrow">Catálogo</p><h1>Produtos e preços</h1>
+  <p class="muted">Margem bruta estimada = preço de venda − custo unitário cadastrado. Não inclui frete, impostos nem despesas operacionais, então não é lucro líquido.</p></div>
+  <div class="ph-actions"><a class="btn btn-gold btn-sm" href="{{ url_for('admin.product_new') }}">Novo produto</a></div>
+</header>
+<div class="tbl-wrap"><table class="tbl">
+  <thead><tr><th></th><th>Produto</th><th class="r">Preço</th><th class="r">Custo unit.</th><th class="r">Margem bruta est.</th><th class="r">Físico</th><th class="r">Reservado</th><th class="r">Disponível</th><th>Situação</th></tr></thead>
+  <tbody>
+  {% for p in rows %}{% set m = margins[p.id] %}<tr>
+    <td><img class="thumb" src="{{ url_for('static', filename=p.image) }}" alt="" width="48" height="48"></td>
+    <td><a href="{{ url_for('admin.product_edit', pid=p.id) }}">{{ p.name }}</a><br><span class="faint small">{{ p.weight_grams | grams }}</span></td>
+    <td class="r">{{ p.price_cents | brl }}</td>
+    <td class="r">{% if p.unit_cost_cents is none %}<span class="est">não informado</span>{% else %}{{ p.unit_cost_cents | brl }}{% endif %}</td>
+    <td class="r">{% if m[0] is none %}—{% else %}<span class="{{ 'pos' if m[0] > 0 else 'neg' }}">{{ m[0] | brl }}</span><br><span class="faint small">{{ m[1] | pct }}</span>{% endif %}</td>
+    <td class="r">{{ p.stock_on_hand }}</td><td class="r">{{ p.stock_reserved }}</td>
+    <td class="r"><b class="{{ 'neg' if available(p) <= p.low_stock_threshold else '' }}">{{ available(p) }}</b></td>
+    <td>{% if p.active %}<span class="badge st-entregue">ativo</span>{% else %}<span class="badge">inativo</span>{% endif %}</td>
+  </tr>{% endfor %}
+  </tbody>
+</table></div>
+{% endblock %}

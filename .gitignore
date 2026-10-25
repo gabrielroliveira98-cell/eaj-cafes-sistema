@@ -1,0 +1,8 @@
+.env
+instance/
+__pycache__/
+*.pyc
+eaj/static/uploads/*
+!eaj/static/uploads/.gitkeep
+.DS_Store
+Thumbs.db

@@ -1,0 +1,113 @@
+{% extends 'admin/base.html' %}
+{% from 'admin/_macros.html' import csrf with context %}
+{% block title %}Pedido {{ o.code }}{% endblock %}
+{% block content %}
+<a class="back link small" href="{{ url_for('admin.order_list') }}">← Pedidos</a>
+<header class="ph" style="margin-top:14px">
+  <div><p class="eyebrow">Pedido</p><h1>{{ o.code }}</h1>
+    <p class="muted">Registrado em {{ o.created_at | datetime_br }} · <span class="badge st-{{ o.status }}">{{ STATUS[o.status] }}</span></p></div>
+</header>
+
+<div class="grid-2 wide-left">
+  <div class="stack">
+    <div class="card">
+      <h2>Itens</h2>
+      <div class="tbl-wrap" style="border:0;background:transparent"><table class="tbl">
+        <thead><tr><th>Produto</th><th class="r">Qtd.</th><th class="r">Preço unit.</th><th class="r">Custo unit.</th><th class="r">Subtotal</th></tr></thead>
+        <tbody>{% for it in items %}<tr><td>{{ it.product_name }}</td><td class="r">{{ it.quantity }}</td><td class="r">{{ it.unit_price_cents | brl }}</td>
+          <td class="r">{{ it.unit_cost_cents | brl if it.unit_cost_cents is not none else 'não informado' }}</td><td class="r">{{ it.line_total_cents | brl }}</td></tr>{% endfor %}</tbody>
+      </table></div>
+      <ul class="kv" style="list-style:none;margin:12px 0 0;padding:0">
+        <li class="sum-row" style="padding:8px 0"><span class="muted">Subtotal</span><b>{{ o.subtotal_cents | brl }}</b></li>
+        <li class="sum-row" style="padding:8px 0"><span class="muted">Frete · {{ o.shipping_label }}</span><b>{{ 'a combinar' if o.shipping_to_arrange else (o.shipping_cents | brl) }}</b></li>
+        <li class="sum-row" style="padding:8px 0;border-top:1px solid var(--line-gold)"><span>Total</span><b>{{ o.total_cents | brl }}</b></li>
+        <li class="sum-row" style="padding:8px 0"><span class="muted">Pago</span><b class="{{ 'pos' if paid else '' }}">{{ paid | brl }}</b></li>
+        {% if o.status == 'aguardando_pagamento' %}<li class="sum-row" style="padding:8px 0"><span class="muted">Em aberto</span><b>{{ remaining | brl }}</b></li>{% endif %}
+      </ul>
+    </div>
+
+    {% if o.status == 'aguardando_pagamento' %}
+    <div class="card">
+      <h2>Registrar pagamento</h2>
+      {% if o.shipping_to_arrange %}
+      <p class="notice warn" style="margin-bottom:16px">O frete deste pedido está "a combinar". Defina o valor combinado com o cliente antes de registrar o pagamento (use 0 se não houver cobrança).</p>
+      <form class="inline-form" method="post" action="{{ url_for('admin.order_shipping', oid=o.id) }}">{{ csrf() }}
+        <div class="field"><label for="ship">Valor do frete (R$)</label><input class="input" id="ship" name="shipping" inputmode="decimal" placeholder="0,00" required></div>
+        <button class="btn btn-gold btn-sm" type="submit">Definir frete</button>
+      </form>
+      {% else %}
+      <p class="muted small" style="margin-bottom:16px">Registre somente pagamentos efetivamente recebidos. Quando o valor cobrir o total, o pedido passa para <b>Pago</b> e o estoque reservado recebe a baixa definitiva.</p>
+      <form method="post" action="{{ url_for('admin.order_payment', oid=o.id) }}">{{ csrf() }}
+        <div class="form-grid">
+          <div class="field"><label for="p-method">Forma</label><select class="input" id="p-method" name="method" required>
+            <option value="">Escolha</option>{% for k, v in METHODS.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select></div>
+          <div class="field"><label for="p-amount">Valor recebido (R$)</label><input class="input" id="p-amount" name="amount" inputmode="decimal" value="{{ remaining | money_input }}" required></div>
+          <div class="field"><label for="p-date">Data do recebimento</label><input class="input" type="date" id="p-date" name="paid_at" value="{{ today }}" max="{{ today }}" required></div>
+          <div class="field"><label for="p-ref">Referência</label><input class="input" id="p-ref" name="reference" placeholder="ID do Pix, comprovante..." maxlength="120"></div>
+          <div class="field span-all"><label for="p-note">Observação</label><input class="input" id="p-note" name="note" maxlength="300"></div>
+        </div>
+        <div class="form-actions"><button class="btn btn-gold" type="submit">Confirmar pagamento recebido</button></div>
+      </form>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    {% if next_steps %}
+    <div class="card">
+      <h2>Atualizar status</h2>
+      <div class="stack">
+      {% for s in next_steps %}
+        {% if s == 'cancelado' %}
+        <details class="disclose"><summary>Cancelar pedido</summary><div>
+          <form method="post" action="{{ url_for('admin.order_status', oid=o.id) }}" data-confirm="Cancelar o pedido {{ o.code }}? O estoque será devolvido.">{{ csrf() }}
+            <input type="hidden" name="to" value="cancelado">
+            <div class="field"><label for="c-note">Motivo (obrigatório)</label><input class="input" id="c-note" name="note" required maxlength="300"></div>
+            {% if paid %}<label class="check" style="margin-top:12px"><input type="checkbox" name="refund_confirmed" value="1" required>
+              <span>Confirmo que o reembolso de {{ paid | brl }} foi feito ou combinado com o cliente.</span></label>{% endif %}
+            <p class="muted small" style="margin-top:10px">{% if paid %}O estoque baixado volta para o físico (estorno).{% else %}A reserva de estoque será liberada.{% endif %}</p>
+            <div class="form-actions"><button class="btn btn-danger" type="submit">Cancelar pedido</button></div>
+          </form></div></details>
+        {% else %}
+        <form class="inline-form" method="post" action="{{ url_for('admin.order_status', oid=o.id) }}">{{ csrf() }}
+          <input type="hidden" name="to" value="{{ s }}">
+          <div class="field"><label for="n-{{ s }}">Observação (opcional)</label><input class="input" id="n-{{ s }}" name="note" maxlength="300" placeholder="{{ 'Código de rastreio, transportadora...' if s == 'enviado' else '' }}"></div>
+          <button class="btn btn-gold btn-sm" type="submit">Marcar como {{ STATUS[s] | lower }}</button>
+        </form>
+        {% endif %}
+      {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="stack">
+    <div class="card">
+      <h2>Cliente e entrega</h2>
+      <ul class="mini-list">
+        <li><span class="muted">Nome</span><span>{{ o.customer_name }}</span></li>
+        <li><span class="muted">E-mail</span><span>{{ o.customer_email }}</span></li>
+        <li><span class="muted">Telefone</span><span>{{ o.customer_phone }}</span></li>
+        <li><span class="muted">Endereço</span><span style="text-align:right">{{ o.ship_street }}, {{ o.ship_number }}{% if o.ship_complement %} · {{ o.ship_complement }}{% endif %}<br>{{ o.ship_district }} · {{ o.ship_city }}/{{ o.ship_state }}<br>CEP {{ o.ship_zip }}</span></li>
+        {% if o.notes %}<li><span class="muted">Observações</span><span style="text-align:right">{{ o.notes }}</span></li>{% endif %}
+      </ul>
+    </div>
+    <div class="card">
+      <h2>Pagamentos</h2>
+      {% if pays %}<ul class="mini-list">{% for p in pays %}<li><span>{{ METHODS.get(p.method, p.method) }} · {{ p.paid_at | datetime_br }}<br><span class="faint small">{{ p.reference or 'sem referência' }} · por {{ p.user_name or '—' }}</span></span>
+        <span style="text-align:right"><b>{{ p.amount_cents | brl }}</b><br><span class="badge {{ 'st-entregue' if p.status == 'confirmado' else 'st-cancelado' }}">{{ p.status }}</span></span></li>{% endfor %}</ul>
+      {% else %}<p class="muted">Nenhum pagamento registrado.</p>{% endif %}
+    </div>
+    <div class="card">
+      <h2>Histórico</h2>
+      <ul class="mini-list">{% for e in events %}<li><span>{{ STATUS.get(e.to_status, e.to_status) }}{% if e.note %}<br><span class="faint small">{{ e.note }}</span>{% endif %}</span>
+        <span class="faint small" style="text-align:right">{{ e.created_at | datetime_br }}<br>{{ e.user_name or 'loja' }}</span></li>{% endfor %}</ul>
+    </div>
+    <div class="card">
+      <h2>Estoque deste pedido</h2>
+      {% if movs %}<ul class="mini-list">{% for m in movs %}<li><span>{{ KIND_LABELS[m.kind] }}<br><span class="faint small">{{ m.product }}</span></span>
+        <span class="faint small" style="text-align:right">físico {{ '%+d' % m.qty_on_hand_delta }} · reservado {{ '%+d' % m.qty_reserved_delta }}<br>{{ m.created_at | datetime_br }}</span></li>{% endfor %}</ul>
+      {% else %}<p class="muted">Sem movimentações.</p>{% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

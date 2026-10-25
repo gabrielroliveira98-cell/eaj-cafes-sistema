@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+{% block title %}Pedido {{ o.code }} · EAJ Cafés Especiais{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/shop.css') }}">{% endblock %}
+{% block content %}
+<section class="page">
+  <div class="wrap">
+    <header class="ord-hero">
+      <p class="eyebrow">{% if is_new %}Pedido registrado{% else %}Acompanhar pedido{% endif %}</p>
+      <h1 style="font-size:clamp(34px,5vw,56px)">{% if is_new %}Obrigado, {{ o.customer_name.split(' ')[0] }}.{% else %}Seu pedido{% endif %}</h1>
+      <p class="ord-code">{{ o.code }}</p>
+      <p><span class="badge st-{{ o.status }}">{{ STATUS[o.status] }}</span></p>
+    </header>
+
+    {% if o.status == 'aguardando_pagamento' %}
+    <div class="notice warn" style="margin-bottom:28px">
+      <span>
+        <b>O pagamento ainda não foi realizado.</b>
+        {% if payment_configured %}Conclua o pagamento pelo método disponível para confirmarmos o pedido.
+        {% else %}Seu pedido foi registrado e os produtos estão reservados. A EAJ vai entrar em contato pelo telefone ou e-mail informado para combinar o pagamento{% if o.shipping_to_arrange %} e o valor da entrega{% endif %}. O pedido só é confirmado depois que o pagamento for recebido.{% endif %}
+        {% if store.payment_instructions %}<br><br>{{ store.payment_instructions }}{% endif %}
+        {% if store.store_whatsapp or store.store_email %}<br><br>Contato da EAJ:
+          {% if store.store_whatsapp %}WhatsApp {{ store.store_whatsapp }}{% endif %}{% if store.store_whatsapp and store.store_email %} · {% endif %}{% if store.store_email %}{{ store.store_email }}{% endif %}{% endif %}
+      </span>
+    </div>
+    {% elif o.status == 'cancelado' %}
+    <div class="notice bad" style="margin-bottom:28px"><span>Este pedido foi cancelado{% if o.cancel_reason %}: {{ o.cancel_reason }}{% endif %}.</span></div>
+    {% endif %}
+
+    {% if o.status != 'cancelado' %}
+    <ol class="timeline" aria-label="Andamento do pedido" style="margin-bottom:40px">
+      {% for s in steps %}
+      <li class="{% if s in reached %}done{% endif %}">{{ STATUS[s] }}{% if s in reached %}<small>{{ reached[s] | datetime_br }}</small>{% endif %}</li>
+      {% endfor %}
+    </ol>
+    {% endif %}
+
+    <div class="ord-grid">
+      <div class="card">
+        <h2 style="font-size:24px;margin-bottom:10px">Itens</h2>
+        <div class="tbl-wrap" style="border:0;background:transparent">
+          <table class="tbl">
+            <thead><tr><th>Produto</th><th class="r">Qtd.</th><th class="r">Preço</th><th class="r">Subtotal</th></tr></thead>
+            <tbody>
+              {% for it in items %}<tr><td>{{ it.product_name }}</td><td class="r">{{ it.quantity }}</td><td class="r">{{ it.unit_price_cents | brl }}</td><td class="r">{{ it.line_total_cents | brl }}</td></tr>{% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <ul class="kv" style="margin-top:12px">
+          <li><span>Subtotal</span><b>{{ o.subtotal_cents | brl }}</b></li>
+          <li><span>Entrega ({{ o.shipping_label }})</span><b>{{ 'A combinar' if o.shipping_to_arrange else (o.shipping_cents | brl) }}</b></li>
+          <li><span>Total</span><b style="font-family:var(--serif);font-weight:400;font-size:24px;color:var(--gold-2)">{{ o.total_cents | brl }}{% if o.shipping_to_arrange %} + frete{% endif %}</b></li>
+          {% if paid %}<li><span>Pago até agora</span><b class="pos">{{ paid | brl }}</b></li>{% endif %}
+        </ul>
+      </div>
+      <div class="card">
+        <h2 style="font-size:24px;margin-bottom:10px">Entrega</h2>
+        <ul class="kv">
+          <li><span>Nome</span><b>{{ o.customer_name }}</b></li>
+          <li><span>Endereço</span><b>{{ o.ship_street }}, {{ o.ship_number }}{% if o.ship_complement %} · {{ o.ship_complement }}{% endif %}<br>{{ o.ship_district }} · {{ o.ship_city }}/{{ o.ship_state }} · {{ o.ship_zip }}</b></li>
+          <li><span>Registrado em</span><b>{{ o.created_at | datetime_br }}</b></li>
+        </ul>
+        <p class="muted small" style="margin-top:16px">Guarde o número do pedido. Você pode consultar o andamento a qualquer momento em <a class="link" href="{{ url_for('shop.lookup') }}">Consultar pedido</a>, com este número e o seu e-mail.</p>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}{% if is_new %}<script>window.addEventListener('DOMContentLoaded',()=>{window.EAJCart&&EAJCart.clear();const c=document.getElementById('cart-count');if(c)c.textContent='0';});</script>{% endif %}{% endblock %}

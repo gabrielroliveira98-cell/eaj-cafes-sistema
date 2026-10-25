@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }} · EAJ Cafés Especiais{% endblock %}
+{% block content %}
+<section class="wrap err-page">
+  <div>
+    <p class="code">{{ code }}</p>
+    <h1>{{ title }}</h1>
+    <p class="muted">{{ detail or 'Não foi possível concluir esta ação.' }}</p>
+    <a class="btn" href="{{ url_for('shop.index') }}">Voltar para a loja</a>
+  </div>
+</section>
+{% endblock %}

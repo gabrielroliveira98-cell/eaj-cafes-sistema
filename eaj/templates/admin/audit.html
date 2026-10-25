@@ -1,0 +1,16 @@
+{% extends 'admin/base.html' %}
+{% from 'admin/_macros.html' import pager with context %}
+{% block title %}Histórico de alterações{% endblock %}
+{% block content %}
+<header class="ph"><div><p class="eyebrow">Configuração</p><h1>Histórico de alterações</h1>
+  <p class="muted">Registro das alterações administrativas e financeiras: quem fez, quando e o que mudou.</p></div></header>
+{% if rows %}
+<div class="tbl-wrap"><table class="tbl">
+  <thead><tr><th>Data</th><th>Usuário</th><th>Ação</th><th>Registro</th><th>Detalhes</th></tr></thead>
+  <tbody>{% for a in rows %}<tr><td>{{ a.created_at | datetime_br }}</td><td>{{ a.user_name or 'sistema' }}<br><span class="faint small mono">{{ a.ip }}</span></td>
+    <td>{{ a.action | replace('_', ' ') }}</td><td class="mono">{{ a.entity }}{% if a.entity_id %} #{{ a.entity_id }}{% endif %}</td>
+    <td><div class="json mono">{{ a.details }}</div></td></tr>{% endfor %}</tbody>
+</table></div>
+{{ pager(page, pages, total, 'registro(s)') }}
+{% else %}<div class="empty"><p>Nenhuma alteração registrada.</p></div>{% endif %}
+{% endblock %}

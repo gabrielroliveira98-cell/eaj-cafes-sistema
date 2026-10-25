@@ -1,0 +1,22 @@
+{% macro pager(page, pages, total, label='registro(s)') %}
+<div class="pager">
+  <span>{{ total }} {{ label }} · página {{ page }} de {{ pages }}</span>
+  <div>
+    {% set args = request.args.to_dict() %}
+    {% if page > 1 %}{% set _ = args.update({'page': page - 1}) %}<a class="btn btn-sm" href="?{{ args | urlencode }}">← Anterior</a>{% endif %}
+    {% if page < pages %}{% set _ = args.update({'page': page + 1}) %}<a class="btn btn-sm" href="?{{ args | urlencode }}">Próxima →</a>{% endif %}
+  </div>
+</div>
+{% endmacro %}
+
+{% macro field(name, label, value='', type='text', errors={}, hint='', attrs='', span=False) %}
+<div class="field{% if errors.get(name) %} has-err{% endif %}{% if span %} span-all{% endif %}">
+  <label for="x-{{ name }}">{{ label }}</label>
+  <input class="input" id="x-{{ name }}" name="{{ name }}" type="{{ type }}" value="{{ value if value is not none else '' }}" {{ attrs | safe }}
+         {% if errors.get(name) %}aria-invalid="true" aria-describedby="xe-{{ name }}"{% endif %}>
+  {% if hint %}<span class="hint">{{ hint }}</span>{% endif %}
+  {% if errors.get(name) %}<span class="err" id="xe-{{ name }}">{{ errors[name] }}</span>{% endif %}
+</div>
+{% endmacro %}
+
+{% macro csrf() %}<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">{% endmacro %}

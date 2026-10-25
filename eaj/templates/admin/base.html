@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="csrf-token" content="{{ csrf_token() }}">
+<title>{% block title %}Painel{% endblock %} · EAJ</title>
+<link rel="icon" href="{{ url_for('static', filename='img/logo.webp') }}" type="image/webp">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/eaj.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+{% block head %}{% endblock %}
+</head>
+<body class="panel-body">
+<a class="skip" href="#conteudo">Pular para o conteúdo</a>
+{% set ep = request.endpoint or '' %}
+{% macro nav(endpoint, label, icon, perm=None, match=None, count=None) %}
+{% if not perm or has_perm(perm) %}
+<a href="{{ url_for(endpoint) }}" {% if ep == endpoint or (match and ep.startswith(match)) %}aria-current="page"{% endif %}>
+  <svg viewBox="0 0 24 24" aria-hidden="true">{{ icon | safe }}</svg>{{ label }}{% if count %}<span class="count">{{ count }}</span>{% endif %}</a>
+{% endif %}
+{% endmacro %}
+<div class="shell">
+  <aside class="side" id="side">
+    <div class="side-top">
+      <a class="brand" href="{{ url_for('shop.index') }}" aria-label="Ver a loja">
+        <img src="{{ url_for('static', filename='img/logo.webp') }}" alt="" width="36" height="36">
+        <span><b>EAJ</b><small>{% block area %}Gestão{% endblock %}</small></span>
+      </a>
+      <button class="icon-btn side-toggle" type="button" aria-controls="side-nav" aria-expanded="false" id="side-toggle" aria-label="Abrir menu" style="font-size:16px">☰</button>
+    </div>
+    <nav class="side-nav" id="side-nav" aria-label="Painel">
+      {% if has_perm('pedidos') or has_perm('produtos') or has_perm('estoque') or has_perm('financeiro') %}
+      <p class="side-group">Operação</p>
+      {{ nav('admin.dashboard', 'Visão geral', '<path d="M4 13h6V4H4zM14 20h6v-9h-6zM4 20h6v-4H4zM14 4v4h6V4z"/>') }}
+      {% endif %}
+      {{ nav('admin.order_list', 'Pedidos', '<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/>', 'pedidos', 'admin.order') }}
+      {{ nav('admin.products', 'Produtos e preços', '<path d="M4 8l8-4 8 4v8l-8 4-8-4z"/><path d="M4 8l8 4 8-4M12 12v8"/>', 'produtos', 'admin.product') }}
+      {{ nav('admin.stock', 'Estoque', '<path d="M3 7h18v13H3z"/><path d="M3 7l3-4h12l3 4M9 11h6"/>', 'estoque') }}
+      {% if has_perm('financeiro') or has_perm('socios') %}<p class="side-group">Finanças</p>{% endif %}
+      {{ nav('admin.finance_list', 'Lançamentos', '<path d="M4 19V5M4 19h16"/><path d="M8 15l3-4 3 2 5-6"/>', 'financeiro', 'admin.finance') }}
+      {{ nav('admin.partners_view', 'Sócios e distribuição', '<circle cx="9" cy="8" r="3.2"/><circle cx="17" cy="9" r="2.6"/><path d="M3 20c.6-3.4 3-5 6-5s5.4 1.6 6 5M15 15c2.8 0 5 1.4 5.6 4.4"/>', 'socios', 'admin.partners') }}
+      {% if has_perm('bi') %}<p class="side-group">Análise</p>{% endif %}
+      {{ nav('bi.dashboard', 'Painel de análise (BI)', '<path d="M5 20V10M10 20V4M15 20v-7M20 20v-11"/>', 'bi', 'bi.') }}
+      {% if has_perm('frete') or has_perm('usuarios') or has_perm('auditoria') %}<p class="side-group">Configuração</p>{% endif %}
+      {{ nav('admin.shipping', 'Formas de entrega', '<path d="M3 6h11v10H3zM14 10h4l3 3v3h-7z"/><circle cx="7" cy="18" r="1.8"/><circle cx="17" cy="18" r="1.8"/>', 'frete') }}
+      {{ nav('admin.users', 'Usuários e permissões', '<circle cx="12" cy="8" r="3.5"/><path d="M5 20c.8-4 3.6-6 7-6s6.2 2 7 6"/>', 'usuarios') }}
+      {{ nav('admin.store_settings', 'Loja e contato', '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-2.7-1.1l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0-1.1-2.7H3a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.1-2.7l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 2.7-1.1V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0 1.1 2.7H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1.3z"/>', 'usuarios') }}
+      {{ nav('admin.audit', 'Histórico de alterações', '<circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 2"/>', 'auditoria') }}
+    </nav>
+    <div class="side-foot">
+      <b>{{ current_user['name'] }}</b><span class="faint">{{ ROLES[current_user['role']] }}</span>
+      <div class="row">
+        <a class="link small" href="{{ url_for('admin.my_password') }}">Trocar senha</a>
+        <form method="post" action="{{ url_for('account.logout') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="link small" type="submit">Sair</button></form>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main" id="conteudo">
+    {% with msgs = get_flashed_messages(with_categories=true) %}
+    {% if msgs %}<div class="flashes" role="status" aria-live="polite">{% for cat, m in msgs %}<p class="flash flash-{{ cat }}">{{ m }}</p>{% endfor %}</div>{% endif %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </main>
+</div>
+<script>
+(() => {
+  const t = document.getElementById('side-toggle'), s = document.getElementById('side');
+  t?.addEventListener('click', () => { const o = s.classList.toggle('open'); t.setAttribute('aria-expanded', o); t.setAttribute('aria-label', o ? 'Fechar menu' : 'Abrir menu'); });
+  document.querySelectorAll('.flash').forEach(f => setTimeout(() => { f.classList.add('out'); setTimeout(() => f.remove(), 450); }, 6000));
+  // confirmação para ações destrutivas: <form data-confirm="mensagem">
+  document.querySelectorAll('form[data-confirm]').forEach(f => f.addEventListener('submit', e => {
+    if (!window.confirm(f.dataset.confirm)) e.preventDefault();
+  }));
+})();
+</script>
+{% block scripts %}{% endblock %}
+{% if live_reload %}<script>
+(function(){let v=null;setInterval(()=>fetch('/__dev/stamp',{cache:'no-store'}).then(r=>r.ok?r.text():null).then(t=>{if(!t)return;if(v===null)v=t;else if(t!==v)location.reload()}).catch(()=>{}),900)})();
+</script>{% endif %}
+</body>
+</html>

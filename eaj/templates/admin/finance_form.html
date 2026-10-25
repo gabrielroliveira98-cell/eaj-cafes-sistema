@@ -1,0 +1,43 @@
+{% extends 'admin/base.html' %}
+{% from 'admin/_macros.html' import field, csrf with context %}
+{% block title %}{{ 'Editar lançamento' if entry else 'Novo lançamento' }}{% endblock %}
+{% set src = form if form else (entry or {}) %}
+{% block content %}
+<a class="back link small" href="{{ url_for('admin.finance_list') }}">← Lançamentos</a>
+<header class="ph" style="margin-top:14px"><div><p class="eyebrow">Finanças</p><h1>{{ 'Editar lançamento' if entry else 'Novo lançamento' }}</h1></div></header>
+<form class="card form-card" method="post">{{ csrf() }}
+  <div class="form-grid">
+    <div class="field{% if errors.get('category_id') %} has-err{% endif %} span-all"><label for="x-cat">Categoria</label>
+      <select class="input" id="x-cat" name="category_id" required><option value="">Escolha</option>
+        {% for kind, label in KINDS.items() %}<optgroup label="{{ label }}">
+          {% for c in cats if c.kind == kind %}<option value="{{ c.id }}" {% if (src.get('category_id') | string) == (c.id | string) %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
+        </optgroup>{% endfor %}
+      </select>
+      <span class="hint">Compras de mercadoria ficam fora do resultado (o custo entra pelo CPV quando o produto é vendido). Impostos entram como dedução da receita.</span>
+      {% if errors.get('category_id') %}<span class="err">{{ errors.category_id }}</span>{% endif %}</div>
+    {{ field('description', 'Descrição', src.get('description', ''), errors=errors, attrs='required maxlength="200"', span=True) }}
+    {{ field('amount', 'Valor (R$)', form.get('amount') if form else (entry.amount_cents | money_input if entry else ''), errors=errors, attrs='required inputmode="decimal" placeholder="0,00"') }}
+    {{ field('competence_date', 'Data de competência', src.get('competence_date') or today, 'date', errors, 'Período a que o lançamento pertence.', 'required') }}
+    {{ field('due_date', 'Vencimento (opcional)', src.get('due_date') or '', 'date', errors) }}
+    <div class="field"><label for="x-status">Status</label><select class="input" id="x-status" name="status">
+      {% for k, v in STATUS.items() %}<option value="{{ k }}" {% if src.get('status', 'previsto') == k %}selected{% endif %}>{{ v }}</option>{% endfor %}</select>
+      <span class="hint">Previsto = ainda não pago/recebido. Realizado = já saiu ou entrou no caixa.</span></div>
+    {{ field('settled_date', 'Data do pagamento/recebimento', src.get('settled_date') or '', 'date', errors, 'Obrigatória quando o status é realizado.') }}
+    <div class="field span-all"><label for="x-notes">Observações</label><textarea class="input" id="x-notes" name="notes" maxlength="600">{{ src.get('notes', '') }}</textarea></div>
+  </div>
+  <div class="form-actions"><button class="btn btn-gold" type="submit">Salvar</button><a class="btn" href="{{ url_for('admin.finance_list') }}">Voltar</a></div>
+</form>
+{% if entry %}
+<form class="danger-zone form-card" method="post" action="{{ url_for('admin.finance_delete', eid=entry.id) }}" data-confirm="Excluir este lançamento definitivamente?">{{ csrf() }}
+  <h3>Excluir lançamento</h3>
+  <p class="muted small">Prefira mudar o status para "Cancelado" quando o lançamento não aconteceu. A exclusão remove o registro; uma cópia fica no histórico de alterações.</p>
+  <div class="inline-form" style="margin-top:12px"><div class="field"><label for="x-confirm">Digite EXCLUIR para confirmar</label><input class="input" id="x-confirm" name="confirm" autocomplete="off" required></div>
+    <button class="btn btn-danger btn-sm" type="submit">Excluir</button></div>
+</form>
+{% endif %}
+{% endblock %}
+{% block scripts %}<script>
+(() => { const s = document.getElementById('x-status'), d = document.getElementById('x-settled_date');
+  const sync = () => { d.closest('.field').style.opacity = s.value === 'realizado' ? 1 : .5; d.required = s.value === 'realizado'; };
+  s.addEventListener('change', sync); sync(); })();
+</script>{% endblock %}

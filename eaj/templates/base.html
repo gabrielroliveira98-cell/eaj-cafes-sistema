@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>{% block title %}EAJ Cafés Especiais{% endblock %}</title>
+<meta name="description" content="{% block description %}EAJ Cafés Especiais. Da fazenda para sua casa.{% endblock %}">
+<meta name="theme-color" content="#0E0B09">
+<meta name="csrf-token" content="{{ csrf_token() }}">
+<link rel="icon" href="{{ url_for('static', filename='img/logo.webp') }}" type="image/webp">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/eaj.css') }}">
+{% block head %}{% endblock %}
+<script>document.documentElement.classList.add('js')</script>
+</head>
+<body class="{% block body_class %}{% endblock %}">
+<a class="skip" href="#conteudo">Pular para o conteúdo</a>
+
+{% block header %}
+<header class="site-head" id="site-head">
+  <div class="wrap head-row">
+    <a class="brand" href="{{ url_for('shop.index') }}" aria-label="EAJ Cafés Especiais, página inicial">
+      <img src="{{ url_for('static', filename='img/logo.webp') }}" alt="" width="40" height="40">
+      <span><b>EAJ</b><small>Cafés Especiais</small></span>
+    </a>
+    <nav class="head-nav" aria-label="Principal">
+      <a href="{{ url_for('shop.index') }}#loja">Cafés</a>
+      <a href="{{ url_for('shop.lookup') }}">Consultar pedido</a>
+      {% if current_user %}
+        {% if is_staff() %}<a href="{{ url_for('admin.dashboard') if has_perm('pedidos') or has_perm('produtos') or has_perm('financeiro') else url_for('bi.dashboard') }}">Painel</a>
+        {% else %}<a href="{{ url_for('account.my_orders') }}">Meus pedidos</a>{% endif %}
+      {% else %}<a href="{{ url_for('account.login') }}">Entrar</a>{% endif %}
+    </nav>
+    <button class="cart-btn" type="button" id="cart-open" aria-controls="cart" aria-expanded="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8h14l-1.2 12H6.2z"/><path d="M9 8V6.5a3 3 0 0 1 6 0V8"/></svg>
+      <span>Carrinho</span><b class="cart-count" id="cart-count" aria-label="itens no carrinho">0</b>
+    </button>
+  </div>
+</header>
+{% endblock %}
+
+{% with msgs = get_flashed_messages(with_categories=true) %}
+{% if msgs %}<div class="flashes" role="status" aria-live="polite">
+  {% for cat, m in msgs %}<p class="flash flash-{{ cat }}">{{ m }}</p>{% endfor %}
+</div>{% endif %}
+{% endwith %}
+
+<main id="conteudo">{% block content %}{% endblock %}</main>
+
+{% block footer %}
+<footer class="site-foot">
+  <div class="wrap foot-grid">
+    <div class="foot-brand">
+      <img src="{{ url_for('static', filename='img/logo.webp') }}" alt="Logo EAJ Cafés Especiais" width="84" height="84" loading="lazy">
+      <div>
+        <p class="foot-sig">Da fazenda para sua casa.</p>
+        <p class="muted">Sul de Minas · Jacuí–MG · Cultivo natural</p>
+      </div>
+    </div>
+    <nav class="foot-nav" aria-label="Rodapé">
+      <a href="{{ url_for('shop.index') }}#loja">Cafés</a>
+      <a href="{{ url_for('shop.lookup') }}">Consultar pedido</a>
+      <a href="{{ url_for('account.login') }}">Minha conta</a>
+    </nav>
+    <p class="foot-legal muted">EAJ · Enrico, Agnaldo e Juventino. Os dados informados nos pedidos são usados apenas para contato, pagamento e entrega.</p>
+  </div>
+</footer>
+{% endblock %}
+
+{% block cart %}
+<div class="drawer-shade" id="cart-shade" hidden></div>
+<aside class="drawer" id="cart" aria-label="Carrinho" aria-hidden="true" tabindex="-1">
+  <div class="drawer-head">
+    <h2>Seu carrinho</h2>
+    <button class="icon-btn" type="button" id="cart-close" aria-label="Fechar carrinho">×</button>
+  </div>
+  <div class="drawer-body" id="cart-body" aria-live="polite"></div>
+  <div class="drawer-foot" id="cart-foot" hidden>
+    <div class="sum-row"><span>Subtotal</span><b id="cart-subtotal">—</b></div>
+    <p class="muted small">Frete calculado conforme a forma de entrega escolhida no próximo passo.</p>
+    <a class="btn btn-gold btn-block" href="{{ url_for('shop.checkout') }}">Continuar para o pedido</a>
+  </div>
+</aside>
+<script src="{{ url_for('static', filename='js/cart.js') }}" defer></script>
+{% endblock %}
+
+{% block scripts %}{% endblock %}
+{% if live_reload %}<script>
+(function(){let v=null;setInterval(()=>fetch('/__dev/stamp',{cache:'no-store'}).then(r=>r.ok?r.text():null).then(t=>{if(!t)return;if(v===null)v=t;else if(t!==v)location.reload()}).catch(()=>{}),900)})();
+</script>{% endif %}
+</body>
+</html>

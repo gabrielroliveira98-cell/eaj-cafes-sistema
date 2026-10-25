@@ -1,0 +1,60 @@
+{% extends 'admin/base.html' %}
+{% block title %}Visão geral{% endblock %}
+{% block content %}
+<header class="ph">
+  <div><p class="eyebrow">Visão geral</p><h1>Bom trabalho, {{ current_user['name'].split(' ')[0] }}.</h1>
+    <p class="muted">Números calculados a partir dos pedidos e lançamentos registrados. Venda = pedido com pagamento confirmado.</p></div>
+  <div class="ph-actions">
+    {% if has_perm('pedidos') %}<a class="btn btn-sm" href="{{ url_for('admin.order_list', status='aguardando_pagamento') }}">Pedidos aguardando pagamento</a>{% endif %}
+    {% if has_perm('financeiro') %}<a class="btn btn-sm btn-gold" href="{{ url_for('admin.finance_new') }}">Registrar despesa</a>{% endif %}
+  </div>
+</header>
+
+{% if missing_cost %}<p class="notice warn" style="margin-bottom:20px">{{ missing_cost }} produto(s) ativo(s) sem custo unitário cadastrado. Sem o custo, o CPV, a margem e o resultado ficam incompletos.{% if has_perm('produtos') %} <a class="link" href="{{ url_for('admin.products') }}">Cadastrar custos</a>{% endif %}</p>{% endif %}
+
+<div class="kpis">
+  <div class="kpi lead"><p class="lbl">Vendas de hoje</p><p class="val">{{ day.gross_cents | brl }}</p><p class="sub">{{ day.orders }} pedido(s) pago(s) hoje</p></div>
+  <div class="kpi"><p class="lbl">Vendas do mês</p><p class="val">{{ month.gross_revenue | brl }}</p><p class="sub">{{ month.sales.orders }} pedido(s) pago(s) · {{ month.sales.units }} unidade(s)</p></div>
+  <div class="kpi"><p class="lbl">Pedidos registrados no mês</p><p class="val">{{ month_orders }}</p><p class="sub">Inclui os que ainda aguardam pagamento</p></div>
+  <div class="kpi"><p class="lbl">Pedidos em aberto</p><p class="val">{{ pending }}</p><p class="sub">{{ counts.get('aguardando_pagamento', 0) }} aguardando pagamento · {{ counts.get('pago', 0) + counts.get('em_preparo', 0) }} a preparar · {{ counts.get('enviado', 0) }} em trânsito</p></div>
+  <div class="kpi"><p class="lbl">Pedidos concluídos</p><p class="val">{{ counts.get('entregue', 0) }}</p><p class="sub">Entregues (total)</p></div>
+</div>
+
+<h2 class="section-title">Resultado do mês <span class="faint" style="font-family:var(--sans);font-size:14px">{{ m0.isoformat() | date_br }} a {{ m1.isoformat() | date_br }}</span></h2>
+<div class="grid-2 wide-left">
+  <div class="card">
+    <ul class="dre">
+      <li><span>Receita bruta</span><b>{{ month.gross_revenue | brl }}</b></li>
+      <li class="sub"><span>Deduções (impostos registrados)</span><b>{{ (-month.deductions) | brl }}</b></li>
+      <li><span>Receita líquida</span><b>{{ month.net_revenue | brl }}</b></li>
+      <li class="sub"><span>Custo dos produtos vendidos (CPV)</span><b>{{ (-month.cogs) | brl }}</b></li>
+      <li><span>Lucro bruto</span><b>{{ month.gross_profit | brl }}</b></li>
+      <li class="sub"><span>Despesas operacionais</span><b>{{ (-month.opex) | brl }}</b></li>
+      <li class="sub"><span>Outras receitas</span><b>{{ month.other_income | brl }}</b></li>
+      <li class="total"><span>Resultado líquido estimado{% if month.estimated %}<span class="est">estimativa</span>{% endif %}</span><b class="{{ 'pos' if month.net_result > 0 else ('neg' if month.net_result < 0 else '') }}">{{ month.net_result | brl }}</b></li>
+      <li class="info"><span>Compras de mercadoria no mês (fora do resultado; entram pelo CPV)</span><b>{{ month.merch_purchases | brl }}</b></li>
+      <li class="info"><span>Total de despesas registradas no mês</span><b>{{ month.expenses_total | brl }}</b></li>
+    </ul>
+    {% for n in month.notes %}<p class="notice warn" style="margin-top:12px">{{ n }}</p>{% endfor %}
+  </div>
+  <div class="card">
+    <div class="card-head"><h2>Estoque baixo</h2>{% if has_perm('estoque') %}<a class="btn btn-sm" href="{{ url_for('admin.stock') }}">Estoque</a>{% endif %}</div>
+    {% if low %}
+    <ul class="mini-list">{% for p in low %}<li><span>{{ p.name }}</span><span><b class="{{ 'neg' if p.available <= 0 else '' }}">{{ p.available }}</b> <span class="faint small">disp. · alerta em {{ p.low_stock_threshold }}</span></span></li>{% endfor %}</ul>
+    {% else %}<p class="muted">Nenhum produto abaixo do limite de alerta.</p>{% endif %}
+  </div>
+</div>
+
+{% if has_perm('pedidos') %}
+<div class="card-head" style="margin-top:36px"><h2 class="section-title" style="margin:0">Pedidos recentes</h2><a class="btn btn-sm" href="{{ url_for('admin.order_list') }}">Todos os pedidos</a></div>
+{% if recent %}
+<div class="tbl-wrap"><table class="tbl">
+  <thead><tr><th>Pedido</th><th>Cliente</th><th>Registrado em</th><th>Status</th><th class="r">Total</th></tr></thead>
+  <tbody>{% for o in recent %}<tr>
+    <td><a href="{{ url_for('admin.order_detail', oid=o.id) }}">{{ o.code }}</a></td><td>{{ o.customer_name }}</td><td>{{ o.created_at | datetime_br }}</td>
+    <td><span class="badge st-{{ o.status }}">{{ STATUS[o.status] }}</span></td><td class="r">{{ o.total_cents | brl }}</td></tr>{% endfor %}</tbody>
+</table></div>
+{% else %}<div class="empty"><h3>Nenhum pedido ainda</h3><p>Os pedidos feitos na loja aparecem aqui. Antes, registre a entrada de estoque dos produtos para que fiquem disponíveis.</p>
+  {% if has_perm('estoque') %}<a class="btn btn-gold" href="{{ url_for('admin.stock') }}">Registrar entrada de estoque</a>{% endif %}</div>{% endif %}
+{% endif %}
+{% endblock %}

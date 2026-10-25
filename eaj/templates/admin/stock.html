@@ -1,0 +1,55 @@
+{% extends 'admin/base.html' %}
+{% from 'admin/_macros.html' import pager, csrf with context %}
+{% block title %}Estoque{% endblock %}
+{% block content %}
+<header class="ph"><div><p class="eyebrow">Operação</p><h1>Estoque</h1>
+  <p class="muted">O pedido novo <b>reserva</b> o estoque. A <b>baixa</b> definitiva acontece quando o pagamento é confirmado. Cancelamentos liberam a reserva ou estornam a baixa automaticamente.</p></div></header>
+
+<div class="kpis" style="margin-bottom:24px">
+  {% for p in products %}<div class="kpi{% if loop.first %} lead{% endif %}">
+    <p class="lbl">{{ p.name }}</p>
+    <p class="val {{ 'neg' if available(p) <= p.low_stock_threshold else '' }}">{{ available(p) }} <span class="faint" style="font-family:var(--sans);font-size:14px">disponíveis</span></p>
+    <p class="sub">{{ p.stock_on_hand }} em estoque físico · {{ p.stock_reserved }} reservado(s) · alerta em {{ p.low_stock_threshold }}</p>
+  </div>{% endfor %}
+</div>
+
+<div class="card" style="margin-bottom:24px">
+  <h2>Registrar movimentação</h2>
+  <form method="post" action="{{ url_for('admin.stock_move') }}">{{ csrf() }}
+    <div class="form-grid">
+      <div class="field"><label for="m-prod">Produto</label><select class="input" id="m-prod" name="product_id" required>
+        {% for p in products %}<option value="{{ p.id }}" {% if pf == p.id %}selected{% endif %}>{{ p.name }}</option>{% endfor %}</select></div>
+      <div class="field"><label for="m-kind">Tipo</label><select class="input" id="m-kind" name="kind" required>
+        {% for k, v in MANUAL.items() %}<option value="{{ k }}">{{ v[0] }}</option>{% endfor %}</select></div>
+      <div class="field"><label for="m-qty">Quantidade (unidades)</label><input class="input" id="m-qty" name="quantity" type="number" min="1" step="1" required></div>
+      <div class="field"><label for="m-cost">Custo unitário da entrada (R$, opcional)</label><input class="input" id="m-cost" name="unit_cost" inputmode="decimal">
+        <span class="hint">Apenas registro. O custo usado no CPV é o cadastrado no produto.</span></div>
+      <div class="field span-all"><label for="m-note">Observação</label><input class="input" id="m-note" name="note" maxlength="300">
+        <span class="hint">Obrigatória para ajustes e perdas.</span></div>
+    </div>
+    <div class="form-actions"><button class="btn btn-gold" type="submit">Registrar</button></div>
+  </form>
+</div>
+
+<div class="card-head"><h2 class="section-title" style="margin:0">Movimentações</h2>
+  <form class="inline-form" method="get">
+    <div class="field"><label class="sr" for="fp">Produto</label><select class="input" id="fp" name="product" onchange="this.form.submit()" style="min-height:38px">
+      <option value="">Todos os produtos</option>{% for p in products %}<option value="{{ p.id }}" {% if pf == p.id %}selected{% endif %}>{{ p.name }}</option>{% endfor %}</select></div>
+    <div class="field"><label class="sr" for="fk">Tipo</label><select class="input" id="fk" name="kind" onchange="this.form.submit()" style="min-height:38px">
+      <option value="">Todos os tipos</option>{% for k, v in KIND_LABELS.items() %}<option value="{{ k }}" {% if kf == k %}selected{% endif %}>{{ v }}</option>{% endfor %}</select></div>
+    <noscript><button class="btn btn-sm" type="submit">Filtrar</button></noscript>
+  </form>
+</div>
+{% if movs %}
+<div class="tbl-wrap"><table class="tbl">
+  <thead><tr><th>Data</th><th>Produto</th><th>Tipo</th><th class="r">Físico</th><th class="r">Reservado</th><th class="r">Saldo físico</th><th class="r">Saldo reservado</th><th>Pedido</th><th>Observação</th></tr></thead>
+  <tbody>{% for m in movs %}<tr>
+    <td>{{ m.created_at | datetime_br }}</td><td>{{ m.product }}</td><td>{{ KIND_LABELS[m.kind] }}</td>
+    <td class="r">{{ '%+d' % m.qty_on_hand_delta if m.qty_on_hand_delta else '—' }}</td><td class="r">{{ '%+d' % m.qty_reserved_delta if m.qty_reserved_delta else '—' }}</td>
+    <td class="r">{{ m.on_hand_after }}</td><td class="r">{{ m.reserved_after }}</td>
+    <td>{% if m.order_code %}<a href="{{ url_for('admin.order_detail', oid=m.order_id) }}">{{ m.order_code }}</a>{% else %}—{% endif %}</td>
+    <td>{{ m.note }}<br><span class="faint small">{{ m.user_name or 'loja' }}</span></td></tr>{% endfor %}</tbody>
+</table></div>
+{{ pager(page, pages, total, 'movimentação(ões)') }}
+{% else %}<div class="empty"><h3>Nenhuma movimentação</h3><p>Registre a primeira entrada de estoque para os produtos aparecerem como disponíveis na loja.</p></div>{% endif %}
+{% endblock %}

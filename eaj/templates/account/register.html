@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% block title %}Criar conta · EAJ Cafés Especiais{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/shop.css') }}">{% endblock %}
+{% macro fld(name, label, type='text', auto='', hint='') %}
+<div class="field{% if errors.get(name) %} has-err{% endif %}">
+  <label for="r-{{ name }}">{{ label }}</label>
+  <input class="input" id="r-{{ name }}" name="{{ name }}" type="{{ type }}" {% if type != 'password' %}value="{{ form.get(name, '') }}"{% endif %}
+         {% if auto %}autocomplete="{{ auto }}"{% endif %} required {% if errors.get(name) %}aria-invalid="true"{% endif %}>
+  {% if hint %}<span class="hint">{{ hint }}</span>{% endif %}
+  {% if errors.get(name) %}<span class="err">{{ errors[name] }}</span>{% endif %}
+</div>
+{% endmacro %}
+{% block content %}
+<section class="page">
+  <div class="wrap narrow">
+    <div class="card auth-card">
+      <p class="eyebrow">Minha conta</p>
+      <h1>Criar conta</h1>
+      <p class="muted">Com a conta, todos os seus pedidos ficam reunidos em um só lugar. Pedidos anteriores feitos com o mesmo e-mail aparecem automaticamente.</p>
+      <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        {{ fld('name', 'Nome completo', auto='name') }}
+        {{ fld('email', 'E-mail', 'email', 'email') }}
+        {{ fld('phone', 'Telefone com DDD', 'tel', 'tel') }}
+        {{ fld('password', 'Senha', 'password', 'new-password', 'Pelo menos 10 caracteres, com letras e números.') }}
+        {{ fld('password2', 'Repita a senha', 'password', 'new-password') }}
+        <button class="btn btn-gold btn-block" type="submit">Criar conta</button>
+      </form>
+      <p class="auth-alt">Já tem conta? <a href="{{ url_for('account.login') }}">Entrar</a></p>
+    </div>
+  </div>
+</section>
+{% endblock %}

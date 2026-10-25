@@ -1,0 +1,2 @@
+-r requirements.txt
+imageio-ffmpeg>=0.4    # só para extrair quadros de vídeo com manage.py prepare-frames

@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% block title %}Entrar · EAJ Cafés Especiais{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/shop.css') }}">{% endblock %}
+{% block content %}
+<section class="page">
+  <div class="wrap narrow">
+    <div class="card auth-card">
+      <p class="eyebrow">Minha conta</p>
+      <h1>Entrar</h1>
+      <p class="muted">Clientes acompanham seus pedidos. A equipe EAJ acessa o painel de gestão.</p>
+      <form method="post" action="{{ url_for('account.login', next=request.args.get('next')) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="field"><label for="a-email">E-mail</label>
+          <input class="input" id="a-email" name="email" type="email" value="{{ email }}" required autocomplete="email" autofocus></div>
+        <div class="field"><label for="a-pw">Senha</label>
+          <input class="input" id="a-pw" name="password" type="password" required autocomplete="current-password"></div>
+        <button class="btn btn-gold btn-block" type="submit">Entrar</button>
+      </form>
+      <p class="auth-alt">Ainda não tem conta? <a href="{{ url_for('account.register') }}">Cadastre-se</a>. Também é possível comprar sem cadastro.</p>
+    </div>
+  </div>
+</section>
+{% endblock %}

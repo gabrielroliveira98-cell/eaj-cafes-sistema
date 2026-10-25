@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% block title %}{{ p.name }} · EAJ Cafés Especiais{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/shop.css') }}">{% endblock %}
+{% block content %}
+<section class="page">
+  <div class="wrap">
+    <a class="back" href="{{ url_for('shop.index') }}#loja">← Todos os cafés</a>
+    <div class="pd" data-product='{{ {"id": p.id, "name": p.name, "price_cents": p.price_cents, "available": p.available} | tojson }}'>
+      <div class="pd-media"><img src="{{ url_for('static', filename=p.image) }}" alt="Embalagem do {{ p.name }}" width="900" height="900"></div>
+      <div class="pd-info">
+        <p class="eyebrow">EAJ Cafés Especiais</p>
+        <h1>{{ p.name }}</h1>
+        <p class="price">{{ p.price_cents | brl }}</p>
+        <p class="muted" style="margin-top:18px">{{ p.description }}</p>
+        <ul class="pd-specs">
+          <li><span>Peso</span><span>{{ p.weight_grams | grams }}</span></li>
+          <li><span>Disponibilidade</span>
+            <span class="stock {% if p.available <= 0 %}out{% elif p.low %}low{% endif %}">{% if p.available <= 0 %}Esgotado no momento{% elif p.low %}Últimas unidades{% else %}Disponível{% endif %}</span></li>
+          <li><span>Pagamento</span><span>Combinado com a EAJ após o pedido</span></li>
+        </ul>
+        {% if p.available > 0 %}
+        <div class="buy">
+          <div class="qty" role="group" aria-label="Quantidade">
+            <button type="button" data-step="-1" aria-label="Diminuir quantidade">−</button>
+            <input type="number" inputmode="numeric" min="1" max="{{ [p.available, 50] | min }}" value="1" aria-label="Quantidade">
+            <button type="button" data-step="1" aria-label="Aumentar quantidade">+</button>
+          </div>
+          <button class="btn btn-gold add-cart" type="button">Adicionar ao carrinho</button>
+        </div>
+        {% else %}<p class="notice warn">Este café está esgotado no momento.</p>{% endif %}
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
